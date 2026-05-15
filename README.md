@@ -1,1 +1,1 @@
-# GB4-RISC-V-Processor
+# GB3-RISC-V-Processor
