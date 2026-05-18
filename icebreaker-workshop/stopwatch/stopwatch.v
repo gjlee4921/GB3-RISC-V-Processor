@@ -22,6 +22,9 @@ module top (
 	reg [20:0] clkdiv = 0;
 	reg clkdiv_pulse = 0;
 
+	// Running register
+	reg running = 0;
+
 	// Combinatorial logic
 	assign LED1 = BTN1 && BTN2;
     assign LED2 = BTN1 && BTN3;
@@ -41,14 +44,25 @@ module top (
 		end
 
 		// Timer counter
-		if (clkdiv_pulse) begin
+		if (clkdiv_pulse && running) begin
 			display_value <= display_value_inc;
 		end
 
 		// Reset button
         if (!BTN_N) begin
             display_value <= 0;
+			running <= 0;
         end
+
+		// Start button
+		if (BTN3) begin
+			running <= 1;
+		end
+
+		// Stop button
+		if (BTN1) begin
+			running <= 0;
+		end
 
 	end
 
