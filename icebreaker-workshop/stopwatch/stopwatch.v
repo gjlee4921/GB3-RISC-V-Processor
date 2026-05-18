@@ -6,7 +6,7 @@ module top (
 	input  CLK,
 	input  BTN_N, BTN1, BTN2, BTN3,
 	output LED1, LED2, LED3, LED4, LED5,
-	output P1A1, P1A2, P1A3, P1A4, P1A7, P1A8, P1A9, P1A10,
+	output P1A1, P1A2, P1A3, P1A4, P1A7, P1A8, P1A9, P1A10
 );
 	// 7 segment control line bus
 	wire [7:0] seven_segment;
@@ -17,6 +17,10 @@ module top (
 	// Display value register and increment bus
 	reg [7:0] display_value = 0;
 	wire [7:0] display_value_inc;
+
+	// Lap value and timeout registers
+	reg [7:0] lap_value = 0;
+	reg [4:0] lap_timeout = 0;
 
 	// Clock divider and pulse registers
 	reg [20:0] clkdiv = 0;
@@ -43,6 +47,11 @@ module top (
 			clkdiv_pulse <= 0;
 		end
 
+		// Lap timeout counter
+        if (clkdiv_pulse && lap_timeout > 0) begin
+            lap_timeout <= lap_timeout - 1;
+        end
+
 		// Timer counter
 		if (clkdiv_pulse && running) begin
 			display_value <= display_value_inc;
@@ -52,6 +61,7 @@ module top (
         if (!BTN_N) begin
             display_value <= 0;
 			running <= 0;
+			lap_timeout <= 0;
         end
 
 		// Start button
@@ -64,6 +74,12 @@ module top (
 			running <= 0;
 		end
 
+		// Lap button
+        if (BTN2) begin
+            lap_value <= display_value;
+            lap_timeout <= 20;
+        end
+
 	end
 
 	bcd8_increment bcd8_increment_inst (
@@ -74,7 +90,7 @@ module top (
 	// 7 segment display control Pmod 1A
 	seven_seg_ctrl seven_segment_ctrl (
 		.CLK(CLK),
-		.din(display_value[7:0]),
+		.din(lap_timeout ? lap_value[7:0] : display_value[7:0]),
 		.dout(seven_segment)
 	);
 
