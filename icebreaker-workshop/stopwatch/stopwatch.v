@@ -45,6 +45,11 @@ module top (
 			display_value <= display_value_inc;
 		end
 
+		// Reset button
+        if (!BTN_N) begin
+            display_value <= 0;
+        end
+
 	end
 
 	bcd8_increment bcd8_increment_inst (
