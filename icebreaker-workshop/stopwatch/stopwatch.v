@@ -23,11 +23,11 @@ module top (
 	reg clkdiv_pulse = 0;
 
 	// Combinatorial logic
-	assign LED1 = !BTN_N;                            // Not operator example
-	assign LED2 = BTN1 || BTN2;                      // Or operator example
-	assign LED3 = BTN2 ^ BTN3;                       // Xor operator example
-	assign LED4 = BTN3 && !BTN_N;                    // And operator example
-	assign LED5 = (BTN1 + BTN2 + BTN3 + 2'b00) >> 1; // Addition and shift example
+	assign LED1 = BTN1 && BTN2;
+    assign LED2 = BTN1 && BTN3;
+    assign LED3 = BTN2 && BTN3;
+    assign LED4 = !BTN_N;
+    assign LED5 = !BTN_N || BTN1 || BTN2 || BTN3;
 
 	// Synchronous logic
 	always @(posedge CLK) begin
