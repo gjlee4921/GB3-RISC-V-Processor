@@ -1,0 +1,32 @@
+Info: promoting CLK$SB_IO_IN (fanout 89)
+Info: 	         ICESTORM_LC:     165/   5280     3%
+Info: 	        ICESTORM_RAM:       0/     30     0%
+Info: 	               SB_IO:      18/     39    46%
+Info: 	               SB_GB:       3/      8    37%
+Info:     at iteration #1, type ICESTORM_LC: wirelen solved = 218, spread = 511, legal = 534; time = 0.00s
+Info:     at iteration #1, type SB_GB: wirelen solved = 530, spread = 530, legal = 536; time = 0.00s
+Info:     at iteration #2, type ICESTORM_LC: wirelen solved = 223, spread = 631, legal = 631; time = 0.00s
+Info:     at iteration #2, type SB_GB: wirelen solved = 627, spread = 627, legal = 631; time = 0.00s
+Info:     at iteration #3, type ICESTORM_LC: wirelen solved = 238, spread = 473, legal = 497; time = 0.00s
+Info:     at iteration #3, type SB_GB: wirelen solved = 494, spread = 494, legal = 497; time = 0.00s
+Info:     at iteration #4, type ICESTORM_LC: wirelen solved = 251, spread = 501, legal = 527; time = 0.00s
+Info:     at iteration #4, type SB_GB: wirelen solved = 522, spread = 523, legal = 527; time = 0.00s
+Info:     at iteration #5, type ICESTORM_LC: wirelen solved = 266, spread = 493, legal = 514; time = 0.00s
+Info:     at iteration #5, type SB_GB: wirelen solved = 512, spread = 512, legal = 514; time = 0.00s
+Info:     at iteration #6, type ICESTORM_LC: wirelen solved = 253, spread = 521, legal = 547; time = 0.00s
+Info:     at iteration #6, type SB_GB: wirelen solved = 542, spread = 542, legal = 551; time = 0.00s
+Info:     at iteration #7, type ICESTORM_LC: wirelen solved = 297, spread = 533, legal = 557; time = 0.00s
+Info:     at iteration #7, type SB_GB: wirelen solved = 549, spread = 551, legal = 557; time = 0.00s
+Info: Max frequency for clock 'CLK$SB_IO_IN_$glb_clk': 53.70 MHz (PASS at 12.00 MHz)
+Info: Max delay <async>                       -> posedge CLK$SB_IO_IN_$glb_clk: 10.38 ns
+Info: Max delay posedge CLK$SB_IO_IN_$glb_clk -> <async>                      : 4.30 ns
+Info: Critical path report for clock 'CLK$SB_IO_IN_$glb_clk' (posedge -> posedge):
+Info:    routing  3.60  3.60 Net BTN_N$SB_IO_IN (16,0) -> (11,3)
+Info:    routing  7.38  11.86 Net LED4$SB_IO_OUT (11,3) -> (19,31)
+Info: Critical path report for cross-domain path '<async>' -> 'posedge CLK$SB_IO_IN_$glb_clk':
+Info:    routing  3.60  3.60 Net BTN_N$SB_IO_IN (16,0) -> (11,2)
+Info: Critical path report for cross-domain path 'posedge CLK$SB_IO_IN_$glb_clk' -> '<async>':
+Info:    routing  3.70  5.09 Net P1A4$SB_IO_OUT (8,2) -> (7,0)
+Info: Max frequency for clock 'CLK$SB_IO_IN_$glb_clk': 58.09 MHz (PASS at 12.00 MHz)
+Info: Max delay <async>                       -> posedge CLK$SB_IO_IN_$glb_clk: 11.43 ns
+Info: Max delay posedge CLK$SB_IO_IN_$glb_clk -> <async>                      : 5.09 ns
