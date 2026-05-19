@@ -29,8 +29,11 @@ module top (
 	// Running register
 	reg running = 0;
 
+	reg [23:0] hz_counter = 0;
+	reg hz_out = 0;
+
 	// Combinatorial logic
-	assign LED1 = BTN1 && BTN2;
+	assign LED1 = hz_out;
     assign LED2 = BTN1 && BTN3;
     assign LED3 = BTN2 && BTN3;
     assign LED4 = !BTN_N;
@@ -45,6 +48,14 @@ module top (
 		end else begin
 			clkdiv <= clkdiv + 1;
 			clkdiv_pulse <= 0;
+		end
+
+		// 1 Hz square wave generator
+		if (hz_counter == 24'd5999999) begin
+			hz_counter <= 0;
+			hz_out <= ~hz_out;  // toggle every 6M cycles = 1 Hz
+		end else begin
+			hz_counter <= hz_counter + 1;
 		end
 
 		// Lap timeout counter

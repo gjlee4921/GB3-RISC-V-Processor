@@ -1,4 +1,4 @@
-PROJ = stopwatch
+PROJ ?= stopwatch
 
 all: $(PROJ).rpt $(PROJ).bin
 
