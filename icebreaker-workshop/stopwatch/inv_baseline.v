@@ -1,9 +1,10 @@
+// Cause yosys to throw an error when we implicitly declare nets
 `default_nettype none
-
-module inverter(
-	input in,
-	output out
+module top (
+	input  wire BTN_N,
+	output wire LED1,
 );
-	assign out = ~in;
+	// Single inverter
+	assign LED1 = BTN_N;
 
-endmodule 
+endmodule
