@@ -5,6 +5,6 @@ module top (
 	output wire LED1,
 );
 	// Single inverter
-	assign LED1 = BTN_N;
+	assign LED1 = !BTN_N;
 
 endmodule
