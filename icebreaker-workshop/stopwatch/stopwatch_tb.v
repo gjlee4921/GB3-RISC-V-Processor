@@ -82,7 +82,7 @@ module stopwatch_testbench ();
 
         $monitor("time=%3d, BTN_N=%b, BTN1=%b, BTN2=%b, BTN3=%b, LED1=%b, LED2=%b, LED3=%b, LED4=%b, LED5=%b", $time, BTN_N, BTN1, BTN2, BTN3, LED1, LED2, LED3, LED4, LED5);
 		
-		/*
+
 		{BTN_N, BTN1, BTN2, BTN3}  = 4'b0000;
 		#20
 		{BTN_N, BTN1, BTN2, BTN3}  = 4'b0001;
@@ -115,7 +115,7 @@ module stopwatch_testbench ();
 		#20
 		{BTN_N, BTN1, BTN2, BTN3}  = 4'b1111;
 		#20
-        */
+ 
 
 
 
