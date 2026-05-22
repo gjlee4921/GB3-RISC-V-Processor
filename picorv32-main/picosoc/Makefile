@@ -1,5 +1,14 @@
 
-CROSS=riscv32-unknown-elf-
+# Auto-detect available RISC-V toolchain
+ifneq ($(shell which riscv32-unknown-elf-gcc 2>/dev/null),)
+    CROSS=riscv32-unknown-elf-
+else ifneq ($(shell which riscv-none-elf-gcc 2>/dev/null),)
+    CROSS=riscv-none-elf-
+else ifneq ($(shell ls /usr/local/apps/GB3-RISCV/riscv32imc/bin/riscv32-unknown-elf-gcc 2>/dev/null),)
+    CROSS=/usr/local/apps/GB3-RISCV/riscv32imc/bin/riscv32-unknown-elf-
+else
+    $(error No RISC-V toolchain found)
+endif
 CFLAGS=
 
 # ---- iCE40 HX8K Breakout Board ----
