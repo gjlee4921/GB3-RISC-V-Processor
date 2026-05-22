@@ -1,4 +1,3 @@
-
 PicoSoC - A simple example SoC using PicoRV32
 =============================================
 
@@ -28,13 +27,37 @@ and upload them to a connected iCE40-HX8K Breakout Board.
 Run `make icebprog` to build the configuration bit-stream and firmware images
 and upload them to a connected iCEBreaker Board.
 
+### Selecting Firmware
+
+The Makefile supports selecting which firmware `.c` file to compile using the `FW` variable.
+The default is `firmware` (i.e. `firmware.c`). To use a different firmware file, pass `FW=<name>`
+on the command line (without the `.c` extension).
+
+```bash
+# Default — builds and flashes firmware.c
+make icebprog_fw
+
+# Build and flash blink.c instead
+make icebprog_fw FW=blink
+
+# Build firmware only (no flash)
+make FW=blink
+
+# Flash firmware only (hardware already on board, faster)
+make icebprog_fw FW=blink
+```
+
+Any `.c` file placed in the `picosoc/` directory can be used as firmware this way,
+as long as it defines a `main()` function and uses the `-DICEBREAKER` preprocessor flag.
+
 | File                                | Description                                                     |
 | ----------------------------------- | --------------------------------------------------------------- |
 | [picosoc.v](picosoc.v)              | Top-level PicoSoC Verilog module                                |
 | [spimemio.v](spimemio.v)            | Memory controller that interfaces to external SPI flash         |
 | [simpleuart.v](simpleuart.v)        | Simple UART core connected directly to SoC TX/RX lines          |
 | [start.s](start.s)                  | Assembler source for firmware.hex/firmware.bin                  |
-| [firmware.c](firmware.c)            | C source for firmware.hex/firmware.bin                          |
+| [firmware.c](firmware.c)            | Default C firmware — demo with UART menu and benchmarks         |
+| [blink.c](blink.c)                  | Simple blink firmware — blinks LED2, use with `FW=blink`        |
 | [sections.lds](sections.lds)        | Linker script for firmware.hex/firmware.bin                     |
 | [hx8kdemo.v](hx8kdemo.v)            | FPGA-based example implementation on iCE40-HX8K Breakout Board  |
 | [hx8kdemo.pcf](hx8kdemo.pcf)        | Pin constraints for implementation on iCE40-HX8K Breakout Board |
@@ -111,4 +134,3 @@ Note that some changes to the Lattice iCE40-HX8K Breakout Board are required to 
 the faster configurations: (1) The flash chip must be replaced with one that supports the
 faster read commands and (2) the IO2 and IO3 pins on the flash chip must be connected to
 the FPGA IO pins T9 and T8 (near the center of J3).
-

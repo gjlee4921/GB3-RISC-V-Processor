@@ -16,8 +16,8 @@ extern uint32_t sram;
 #define reg_spictrl (*(volatile uint32_t*)0x02000000)
 #define reg_uart_clkdiv (*(volatile uint32_t*)0x02000004)
 #define reg_uart_data (*(volatile uint32_t*)0x02000008)
-#define reg_leds (*(volatile uint8_t*)0x03000000)
-#define reg_7seg (*(volatile uint8_t*)0x03000001)
+#define reg_leds (*(volatile uint32_t*)0x03000000)
+#define reg_7seg (*(volatile uint32_t*)0x03000004)
 
 // --------------------------------------------------------
 
@@ -82,25 +82,37 @@ void enable_flash_crm()
 
 // --------------------------------------------------------
 
-void setup_picosoc(void){
-	reg_uart_clkdiv = 104; // Baud = 1152060
-    reg_7seg = 0x00;       // represents GB3 2026
-	reg_leds = 0x00;
-	set_flash_qspi_flag();
+// void setup_picosoc(void){
+// 	reg_uart_clkdiv = 104; // Baud = 1152060
+//     reg_7seg = 0x66;       // represents GB3 2026
+// 	reg_leds = 0x00;
+// 	set_flash_qspi_flag();
 
+// }
+
+#define DELAY_K 750000
+
+static inline uint32_t rdcycle() {
+    uint32_t cycle;
+    __asm__ volatile ("rdcycle %0" : "=r"(cycle));
+    return cycle;
 }
-
-#define DELAY_K 10000
 
 void main()
 {
-    setup_picosoc();
-    
-    while (1){
-        for (int i = 0; i < DELAY_K; i++);
-        reg_leds = 0x02;
+    reg_uart_clkdiv = 104;
+    reg_7seg = 0x04;
+    reg_leds = 0x00;
 
-        for (int i = 0; i < DELAY_K; i++);
-        reg_leds = 0x00;
+    uint32_t last = rdcycle();
+    int state = 0;
+
+    while (1) {
+        uint32_t now = rdcycle();
+        if ((now - last) >= 6000000) {  // 0.5s at 12MHz
+            last = now;
+            state = !state;
+            reg_leds = state ? 0x02 : 0x00;
+        }
     }
 }
