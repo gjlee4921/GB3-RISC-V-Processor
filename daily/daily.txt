@@ -1,0 +1,9 @@
+2026-05-15
+
+attaching FPGA, going through stopwatch code, adding suite to personal computers
+
+2026-05-19
+wrote inverter code, found power and area measurements
+
+2025-05-22
+doing block diagram for picosoc etc etc
