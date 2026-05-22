@@ -1,0 +1,5 @@
+Info: 	         ICESTORM_LC:       1/   5280     0%
+Info: 	        ICESTORM_RAM:       0/     30     0%
+Info: 	               SB_IO:       2/     39     5%
+Info: 	               SB_GB:       0/      8     0%
+Info:    routing  7.69  7.69 Net LED1$SB_IO_OUT (16,0) -> (18,31)

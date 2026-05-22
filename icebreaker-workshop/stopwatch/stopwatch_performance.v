@@ -6,7 +6,7 @@ module top (
 	input  CLK,
 	input  BTN_N, BTN1, BTN2, BTN3,
 	output LED1, LED2, LED3, LED4, LED5,
-	output P1A1, P1A2, P1A3, P1A4, P1A7, P1A8, P1A9, P1A10,
+	output P1A1, P1A2, P1A3, P1A4, P1A7, P1A8, P1A9, P1A10
 );
 	// 7 segment control line bus
 	wire [7:0] seven_segment;
@@ -18,21 +18,26 @@ module top (
 	reg [7:0] display_value = 0;
 	wire [7:0] display_value_inc;
 
-	// Lap registers
+	// Lap value and timeout registers
 	reg [7:0] lap_value = 0;
 	reg [4:0] lap_timeout = 0;
 
 	// Clock divider and pulse registers
 	reg [20:0] clkdiv = 0;
 	reg clkdiv_pulse = 0;
+
+	// Running register
 	reg running = 0;
 
+	reg [23:0] hz_counter = 0;
+	reg hz_out = 0;
+
 	// Combinatorial logic
-	assign LED1 = BTN1 && BTN2;
-	assign LED2 = BTN1 && BTN3;
-	assign LED3 = BTN2 && BTN3;
-	assign LED4 = !BTN_N;
-	assign LED5 = !BTN_N || BTN1 || BTN2 || BTN3;
+	assign LED1 = hz_out;
+    assign LED2 = BTN1 && BTN3;
+    assign LED3 = BTN2 && BTN3;
+    assign LED4 = !BTN_N;
+    assign LED5 = !BTN_N || BTN1 || BTN2 || BTN3;
 
 	// Synchronous logic
 	always @(posedge CLK) begin
@@ -45,44 +50,55 @@ module top (
 			clkdiv_pulse <= 0;
 		end
 
-		// Lap timeout counter
-		if (clkdiv_pulse && lap_timeout) begin
-			lap_timeout <= lap_timeout - 1;
+		// 1 Hz square wave generator
+		if (hz_counter == 24'd5999999) begin
+			hz_counter <= 0;
+			hz_out <= ~hz_out;  // toggle every 6M cycles = 1 Hz
+		end else begin
+			hz_counter <= hz_counter + 1;
 		end
+
+		// Lap timeout counter
+        if (clkdiv_pulse && lap_timeout > 0) begin
+            lap_timeout <= lap_timeout - 1;
+        end
 
 		// Timer counter
 		if (clkdiv_pulse && running) begin
 			display_value <= display_value_inc;
 		end
 
-		// Button controls
-		if (!BTN_N) begin
-			display_value <= 0;
+		// Reset button
+        if (!BTN_N) begin
+            display_value <= 0;
 			running <= 0;
 			lap_timeout <= 0;
-		end
+        end
 
+		// Start button
 		if (BTN3) begin
 			running <= 1;
 		end
 
+		// Stop button
 		if (BTN1) begin
 			running <= 0;
 		end
 
-		if (BTN2) begin
-			lap_value <= display_value;
-			lap_timeout <= 20;
-		end
+		// Lap button
+        if (BTN2) begin
+            lap_value <= display_value;
+            lap_timeout <= 20;
+        end
+
 	end
 
-	// BCD counter
-	bcd8_increment bot_inc (
-		.din(display_value),
-		.dout(display_value_inc)
-	);
+	bcd8_increment bcd8_increment_inst (
+        .din(display_value),
+        .dout(display_value_inc)
+    );
 
-	// 7 segment display control
+	// 7 segment display control Pmod 1A
 	seven_seg_ctrl seven_segment_ctrl (
 		.CLK(CLK),
 		.din(lap_timeout ? lap_value[7:0] : display_value[7:0]),
@@ -110,7 +126,7 @@ endmodule
 
 // Seven segment controller
 // Switches quickly between the two parts of the display
-// to create the illusion of both halfs being illuminated
+// to create the illusion of both halves being illuminated
 // at the same time.
 module seven_seg_ctrl (
 	input CLK,

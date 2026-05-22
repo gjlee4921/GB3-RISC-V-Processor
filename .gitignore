@@ -1,0 +1,64 @@
+# ======================
+# FPGA Build Outputs
+# ======================
+
+# Yosys synthesis outputs
+*.json
+*.yslog
+
+# nextpnr place & route outputs
+*.asc
+*.nplog
+
+# Timing reports
+*.rpt
+
+# Final bitstream (generated, not source)
+*.bin
+
+# Synthesised Verilog (post-synthesis)
+*_syn.v
+
+# ======================
+# Simulation Outputs
+# ======================
+
+# Compiled simulation binaries
+*_tb
+*_syntb
+
+# Waveform dumps
+*.vcd
+
+# ======================
+# OS / Editor Files
+# ======================
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# ======================
+# RISC-V Build Outputs
+# ======================
+
+*.elf
+*.hex
+*.map
+*.o
+*.a
+
+# ======================
+# Python (Jupyter/Colab)
+# ======================
+
+__pycache__/
+*.pyc
+.ipynb_checkpoints/

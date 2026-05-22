@@ -1,3 +1,6 @@
 2026-05-15
 
 attaching FPGA, going through stopwatch code, adding suite to personal computers
+
+2026-05-19
+wrote inverter code, found power and area measurements
