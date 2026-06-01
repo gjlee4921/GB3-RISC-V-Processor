@@ -661,6 +661,18 @@ void cmd_echo()
 		putchar(c);
 }
 
+// benchmark
+
+uint32_t bench_fib_rec(int n) {
+    if (n <= 1) return n;
+    return bench_fib_rec(n-1) + bench_fib_rec(n-2);
+}
+
+unsigned char run_workload(void) {
+    volatile uint32_t result = bench_fib_rec(10);
+    return (unsigned char)(result & 0xFF);
+}
+
 // --------------------------------------------------------
 
 void main()
@@ -671,6 +683,15 @@ void main()
 
 	reg_leds = 63;
 	set_flash_qspi_flag();
+
+	{	
+		uint32_t t0, t1;
+		__asm__ volatile ("rdcycle %0" : "=r"(t0));
+		run_workload();
+		__asm__ volatile ("rdcycle %0" : "=r"(t1));
+		print_hex(t1 - t0, 8); // print workload cycles
+		putchar('\n');
+	}
 
 	reg_leds = 127;
 	while (getchar_prompt("Press ENTER to continue..\n") != '\r') { /* wait */ }
@@ -693,7 +714,6 @@ void main()
 
 	cmd_print_spi_state();
 	print("\n");
-
 	while (1)
 	{
 		print("\n");
@@ -712,6 +732,7 @@ void main()
 		print("   [M] Run Memtest\n");
 		print("   [S] Print SPI state\n");
 		print("   [e] Echo UART\n");
+		print("   [B] Run workload benchmark\n");
 		print("\n");
 
 		for (int rep = 10; rep > 0; rep--)
@@ -760,6 +781,17 @@ void main()
 			case 'e':
 				cmd_echo();
 				break;
+			case 'B':
+			{
+				uint32_t t0, t1;
+				__asm__ volatile ("rdcycle %0" : "=r"(t0));
+				run_workload();
+				__asm__ volatile ("rdcycle %0" : "=r"(t1));
+				print("Workload cycles: 0x");
+				print_hex(t1 - t0, 8);
+				putchar('\n');
+				break;
+			}
 			default:
 				continue;
 			}

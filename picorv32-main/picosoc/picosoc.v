@@ -103,8 +103,21 @@ module picosoc (
 	wire [3:0] mem_wstrb;
 	wire [31:0] mem_rdata;
 
-	wire spimem_ready;
-	wire [31:0] spimem_rdata;
+	wire spimem_flash_ready;
+	wire [31:0] spimem_flash_rdata;
+
+	wire insn_flash_req = mem_valid && mem_instr &&
+	                      (mem_addr >= 4*MEM_WORDS) && (mem_addr < 32'h 0200_0000);
+	wire data_flash_req = mem_valid && !mem_instr &&
+	                      (mem_addr >= 4*MEM_WORDS) && (mem_addr < 32'h 0200_0000);
+
+	wire icache_cpu_ready;
+	wire [31:0] icache_cpu_rdata;
+	wire icache_flash_valid;
+	wire [23:0] icache_flash_addr;
+
+	wire spimem_ready  = insn_flash_req ? icache_cpu_ready   : spimem_flash_ready;
+	wire [31:0] spimem_rdata = insn_flash_req ? icache_cpu_rdata : spimem_flash_rdata;
 
 	reg ram_ready;
 	wire [31:0] ram_rdata;
@@ -156,13 +169,26 @@ module picosoc (
 		.irq         (irq        )
 	);
 
+	icache icache_inst (
+		.clk         (clk               ),
+		.resetn      (resetn            ),
+		.cpu_valid   (insn_flash_req    ),
+		.cpu_addr    (mem_addr[23:0]    ),
+		.cpu_ready   (icache_cpu_ready  ),
+		.cpu_rdata   (icache_cpu_rdata  ),
+		.flash_valid (icache_flash_valid),
+		.flash_addr  (icache_flash_addr ),
+		.flash_ready (spimem_flash_ready),
+		.flash_rdata (spimem_flash_rdata)
+	);
+
 	spimemio spimemio (
 		.clk    (clk),
 		.resetn (resetn),
-		.valid  (mem_valid && mem_addr >= 4*MEM_WORDS && mem_addr < 32'h 0200_0000),
-		.ready  (spimem_ready),
-		.addr   (mem_addr[23:0]),
-		.rdata  (spimem_rdata),
+		.valid  (icache_flash_valid || data_flash_req),
+		.ready  (spimem_flash_ready),
+		.addr   (icache_flash_valid ? icache_flash_addr : mem_addr[23:0]),
+		.rdata  (spimem_flash_rdata),
 
 		.flash_csb    (flash_csb   ),
 		.flash_clk    (flash_clk   ),
