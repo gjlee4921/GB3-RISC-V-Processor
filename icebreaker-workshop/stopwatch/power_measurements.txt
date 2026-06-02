@@ -1,8 +1,0 @@
-inv_baseline:
-5.07 V      0.35 w    0.08 A    2052 mWh
-
-stopwatch-stopped:
-5.07 V      0.60 w    0.15 A    2055 mWh
-
-stopwatch-active:
-5.07 V      0.60 w    0.15 A    2057 mWh

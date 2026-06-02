@@ -101,7 +101,7 @@ static inline uint32_t rdcycle() {
 void main()
 {
     reg_uart_clkdiv = 104;
-    reg_7seg = 0x04;
+    reg_7seg = 0x66;
     reg_leds = 0x00;
 
     uint32_t last = rdcycle();

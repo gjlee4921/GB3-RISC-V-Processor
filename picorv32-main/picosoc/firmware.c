@@ -36,6 +36,7 @@ extern uint32_t sram;
 #define reg_uart_clkdiv (*(volatile uint32_t*)0x02000004)
 #define reg_uart_data (*(volatile uint32_t*)0x02000008)
 #define reg_leds (*(volatile uint32_t*)0x03000000)
+#define reg_7seg (*(volatile uint32_t*)0x03000004)
 
 // --------------------------------------------------------
 
@@ -160,6 +161,7 @@ void putchar(char c)
 	if (c == '\n')
 		putchar('\r');
 	reg_uart_data = c;
+	
 }
 
 void print(const char *p)
@@ -666,10 +668,12 @@ void cmd_echo()
 uint32_t bench_fib_rec(int n) {
     if (n <= 1) return n;
     return bench_fib_rec(n-1) + bench_fib_rec(n-2);
+	if (n == 29) reg_7seg = 0x11;
+	else reg_7seg = 0x00;
 }
 
 unsigned char run_workload(void) {
-    volatile uint32_t result = bench_fib_rec(10);
+    volatile uint32_t result = bench_fib_rec(15);
     return (unsigned char)(result & 0xFF);
 }
 
@@ -683,6 +687,7 @@ void main()
 
 	reg_leds = 63;
 	set_flash_qspi_flag();
+	set_flash_mode_qddr();
 
 	{	
 		uint32_t t0, t1;

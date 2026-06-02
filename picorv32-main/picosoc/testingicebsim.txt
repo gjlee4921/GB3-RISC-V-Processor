@@ -1,0 +1,55 @@
+vvp -N icebreaker_tb.vvp +firmware=icebreaker_fw.hex
+VCD info: dumpfile testbench.vcd opened for output.
+0000000
++50000 cycles
+0000001
+0000011
+0000111
+0001111
+Serial data: 'B'
+Serial data: 'o'
+Serial data: 'o'
+Serial data: 't'
+Serial data: 'i'
+Serial data: 'n'
++50000 cycles
+Serial data: 'g'
+Serial data: '.'
+Serial data: '.'
+Serial data:  13
+0011111
+Serial data:  10
++50000 cycles
+0111111
+1111111
+Serial data: 'P'
+Serial data: 'r'
++50000 cycles
+Serial data: 'e'
+Serial data: 's'
+Serial data: 's'
+Serial data: ' '
+Serial data: 'E'
+Serial data: 'N'
+Serial data: 'T'
+Serial data: 'E'
+Serial data: 'R'
+Serial data: ' '
+Serial data: 't'
+Serial data: 'o'
+Serial data: ' '
+Serial data: 'c'
+Serial data: 'o'
+Serial data: 'n'
+Serial data: 't'
+Serial data: 'i'
+Serial data: 'n'
+Serial data: 'u'
+Serial data: 'e'
+Serial data: '.'
+Serial data: '.'
+Serial data:  13
+Serial data:  10
++50000 cycles
++50000 cycles
+icebreaker_tb.v:37: $finish called at 3000000000 (1ps)
