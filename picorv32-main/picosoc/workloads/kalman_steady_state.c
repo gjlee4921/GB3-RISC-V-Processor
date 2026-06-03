@@ -1,29 +1,39 @@
 /*
- * kalman.c — Steady-state Kalman filter benchmark
+ * kalman_steady_state.c — Steady-state (constant-gain) Kalman filter benchmark
+ *
+ * This is a SIMPLIFIED Kalman filter: a steady-state / constant-gain variant.
+ * For a time-invariant system (constant F, H, Q, R) the covariance P and the
+ * Kalman gain K converge to constant values, so they are precomputed offline
+ * and the online loop runs only the predict / innovation / update with a FIXED
+ * gain. This is a real, widely-used embedded technique — it avoids the
+ * expensive covariance propagation and matrix inversion of a full filter.
+ *
+ * Computed per step (fixed gain K):
+ *   predict     x_pred = F * x
+ *   innovation  innov  = z - H * x_pred
+ *   update      x      = x_pred + K * innov
+ *
+ * OMITTED relative to a full Kalman filter (see kalman_full.c):
+ *   - covariance predict   P = F P F^T + Q
+ *   - innovation covariance S = H P H^T + R
+ *   - gain computation      K = P H^T S^-1   (requires a matrix inverse)
+ *   - covariance update     P = (I - K H) P
+ * Note: the hardcoded K here is an illustrative tuned gain, not the exact
+ * solution of the discrete algebraic Riccati equation for this F/H/Q/R.
  *
  * 4-state model: position and velocity in 2D (px, py, vx, vy).
- * 2 observations: noisy position measurements (px_meas, py_meas).
- * Fixed-point Q4 arithmetic: scale factor = 16 (1.0 represented as 16).
- * Runs 100 filter steps.
+ * 2 observations: noisy position measurements.
+ * Fixed-point Q4 arithmetic (1.0 represented as 16). 100 filter steps.
  *
  * Cache properties:
- *   Instruction cache  — tight triple-nested matrix-vector loops; inner body
- *                        (~20 instructions) fits within a 16-set cache after
- *                        first outer iteration, giving high hit rate.
- *   Data cache         — kf_F, kf_H, kf_K, kf_z_step, kf_z_noise are all
- *                        static const and live in flash (.rodata); data cache
- *                        eliminates repeated flash reads for these constants.
- *   4-word-line cache  — matrices are accessed row-by-row sequentially; a
- *                        4-word line fetches 4 adjacent int32_t values per
- *                        miss, covering one full row of kf_F or kf_K.
- *   2-way associative  — two simultaneous hot regions (instruction loop and
- *                        matrix data) avoid conflict-mapping each other.
+ *   Instruction cache  — tight triple-nested matrix-vector loops; large enough
+ *                        footprint to benefit from set-associativity + wide lines.
+ *   Data cache         — kf_F, kf_H, kf_K, kf_z_step, kf_z_noise are static
+ *                        const in flash (.rodata), 264 bytes, read every step.
  *
- * Static const flash data: 264 bytes total. A 4-word-line data cache
- * (16 sets × 16 bytes = 256 bytes) covers almost all of it after warm-up.
- *
- * Expected return value: 0xC7 (199 decimal) — estimated px in real units
- * after 100 steps tracking an object at velocity (vx=2, vy=1) units/step.
+ * Expected return value: 0xC7 (199 decimal) — estimated px in real units after
+ * 100 steps tracking an object at velocity (vx=2, vy=1) units/step. Verified
+ * against a host-PC run of the identical fixed-point code.
  */
 
 #include <stdint.h>
@@ -99,6 +109,7 @@ static const int32_t kf_H[KF_N_OBS][KF_N_STATE] = {
     { 0, 16,  0,  0},
 };
 
+// Fixed (precomputed) steady-state gain — illustrative tuned values
 static const int32_t kf_K[KF_N_STATE][KF_N_OBS] = {
     { 8,  0},
     { 0,  8},

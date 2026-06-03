@@ -738,7 +738,7 @@ void main()
 
 	reg_leds = 63;
 	set_flash_qspi_flag();
-	set_flash_mode_qddr();
+  	set_flash_mode_qddr();  // comment out for simulation (spiflash.v doesn't support QDDR)
 
 	{
 		uint32_t t0, t1;
