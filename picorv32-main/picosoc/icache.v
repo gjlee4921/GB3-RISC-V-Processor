@@ -30,8 +30,8 @@ module icache #(parameter NSETS = 16) (
     localparam LADDR_BITS = INDEX_BITS + 2;          // {index,word} = 6 bits → 64 entries
     // Address layout: [1:0] byte | [3:2] word-in-line | [INDEX] index | [..23] tag
 
-    //localparam CACHE_EN = 1'b1; 
-    localparam CACHE_EN = 1'b0; // bypass cache for baseline measurement
+    localparam CACHE_EN = 1'b1; 
+    //localparam CACHE_EN = 1'b0; // bypass cache for baseline measurement
 
     localparam S_IDLE  = 3'd0,
                S_EVAL  = 3'd1,
