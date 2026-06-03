@@ -51,7 +51,7 @@ extern uint32_t sram;
 #define reg_uart_clkdiv (*(volatile uint32_t*)0x02000004)
 #define reg_uart_data   (*(volatile uint32_t*)0x02000008)
 #define reg_leds        (*(volatile uint8_t*)0x03000000)
-#define reg_7seg        (*(volatile uint8_t*)0x03000001)
+#define reg_7seg        (*(volatile uint8_t*)0x03000004)
 
 extern uint32_t flashio_worker_begin;
 extern uint32_t flashio_worker_end;
@@ -86,7 +86,7 @@ void print_hex(uint32_t v, int digits) {
 }
 
 void setup_picosoc(void) {
-	reg_uart_clkdiv = 104; reg_7seg = 0x04; reg_leds = 0x00;
+	reg_uart_clkdiv = 104; reg_leds = 0x00;
 	set_flash_qspi_flag(); set_flash_mode_qddr();
 }
 
@@ -161,22 +161,8 @@ unsigned char run_workload(void) {
     return (unsigned char)((x[0] >> KF_QSCALE) & 0xFF);
 }
 
-unsigned char run_workload_timed(void) {
-	uint32_t t0, t1, i0, i1;
-	__asm__ volatile ("rdcycle   %0" : "=r"(t0));
-	__asm__ volatile ("rdinstret %0" : "=r"(i0));
-	unsigned char result = run_workload();
-	__asm__ volatile ("rdcycle   %0" : "=r"(t1));
-	__asm__ volatile ("rdinstret %0" : "=r"(i1));
-	print("Cycles: 0x"); print_hex(t1 - t0, 8); putchar('\n');
-	print("Instns: 0x"); print_hex(i1 - i0, 8); putchar('\n');
-	print("Result: 0x"); print_hex(result,   2); putchar('\n');
-	return result;
-}
-
 void main(void) {
 	setup_picosoc();
-	unsigned char leds_value = 0x02;
-	run_workload_timed();
-	while (1) { reg_7seg = run_workload(); reg_leds = leds_value; leds_value ^= 0x02; }
+	unsigned char leds_value = 0x20;
+	while (1) { reg_7seg = run_workload(); reg_leds = leds_value; leds_value ^= 0x20; }
 }

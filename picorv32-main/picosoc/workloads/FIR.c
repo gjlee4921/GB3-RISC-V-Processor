@@ -29,7 +29,7 @@ extern uint32_t sram;
 #define reg_uart_clkdiv (*(volatile uint32_t*)0x02000004)
 #define reg_uart_data   (*(volatile uint32_t*)0x02000008)
 #define reg_leds        (*(volatile uint8_t*)0x03000000)
-#define reg_7seg        (*(volatile uint8_t*)0x03000001)
+#define reg_7seg        (*(volatile uint8_t*)0x03000004)
 
 extern uint32_t flashio_worker_begin;
 extern uint32_t flashio_worker_end;
@@ -64,7 +64,7 @@ void print_hex(uint32_t v, int digits) {
 }
 
 void setup_picosoc(void) {
-	reg_uart_clkdiv = 104; reg_7seg = 0x02; reg_leds = 0x00;
+	reg_uart_clkdiv = 104; reg_leds = 0x00;
 	set_flash_qspi_flag(); set_flash_mode_qddr();
 }
 
@@ -105,7 +105,6 @@ unsigned char run_workload_timed(void) {
 
 void main(void) {
 	setup_picosoc();
-	unsigned char leds_value = 0x02;
-	run_workload_timed();
-	while (1) { reg_7seg = run_workload(); reg_leds = leds_value; leds_value ^= 0x02; }
+	unsigned char leds_value = 0x20;
+	while (1) { reg_7seg = run_workload(); reg_leds = leds_value; leds_value ^= 0x20; }
 }
