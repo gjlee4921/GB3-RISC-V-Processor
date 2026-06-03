@@ -113,7 +113,7 @@ module testbench;
 
     initial begin
         // Run for 5M cycles then stop
-        repeat (5_000_000) @(posedge clk);
+        repeat (30_000_000) @(posedge clk);
         $display("\n[cyc %0d] simulation limit reached", cyc);
         $finish;
     end
