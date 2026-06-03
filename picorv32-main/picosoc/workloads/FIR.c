@@ -70,24 +70,22 @@ void setup_picosoc(void) {
 
 // --------------------------------------------------------
 
-#define SIGNAL_SIZE 30
-#define FILTER_SIZE 8
+#define SIGNAL_SIZE 10
+#define FILTER_SIZE 2
 
 unsigned char run_workload(void) {
 	unsigned char signal[SIGNAL_SIZE] = {
-	217,  43, 189,  12, 156,  78, 234,  67, 143,  29,
-	198,  54, 112, 245,  33, 167,  89, 201,  11, 178,
-	 56, 223,  91, 134,  45, 187,  23, 209,  77, 155
+	217,  43, 189,  12, 156,  78, 234,  67, 143,  29
 	};
 	unsigned char filter_coeffs[FILTER_SIZE] = {
-	4, 7, 2, 10, 12, 32, 20, 18};
+	4, 7};
 	unsigned char output[SIGNAL_SIZE];
 	for (int i = 0; i < SIGNAL_SIZE; i++) {
 		uint32_t sum = 0;
 		for (int j = 0; j < FILTER_SIZE; j++)
 			if (i - j >= 0)
 				sum += signal[i - j] * filter_coeffs[j];
-		output[i] = sum / 105;
+		output[i] = sum / 11;
 	}
 	return output[SIGNAL_SIZE - 1];
 }
