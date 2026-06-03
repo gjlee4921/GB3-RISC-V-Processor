@@ -33,8 +33,8 @@ module icache #(parameter NSETS = 16) (
     wire [INDEX_BITS-1:0] index = cpu_addr[INDEX_BITS+1:2];  // bits [5:2]
     wire [TAG_BITS-1:0]   tag   = cpu_addr[23:INDEX_BITS+2]; // bits [23:6]
 
-    // wire hit = cpu_valid && valid_array[index] && (tag_array[index] == tag); // wire hit = 1'b0; for baseline without cache
-    wire hit = 1'b0;
+    //wire hit = cpu_valid && valid_array[index] && (tag_array[index] == tag);
+    wire hit = 1'b0; // for baseline without cache
     
     // Serve hits from cache (1 cycle), misses from flash (write on fill)
     assign flash_valid = cpu_valid && !hit;

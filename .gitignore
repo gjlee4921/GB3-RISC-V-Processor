@@ -62,3 +62,4 @@ desktop.ini
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+compile_flags.txt
