@@ -135,6 +135,64 @@ FLASH, and the startup code does not copy it to RAM), so they are read via
 execute-in-place — relevant for a future data cache, but not cached by this
 instruction-only design.
 
+## Workflow
+
+### Synthesis and flashing
+
+```bash
+touch firmware.c       # ensure firmware.c is recompiled, not a stale workload binary
+make icebprog
+```
+
+Make automatically detects what needs rebuilding. If `icebreaker.bin` is
+already up to date (no `.v` files changed since last build), it skips
+synthesis and only recompiles and flashes the firmware — takes seconds.
+If any `.v` file changed, it runs full synthesis + place-and-route first.
+At 99% utilisation this takes **3–4 minutes** due to the congested routing.
+
+After flashing, the board runs the interactive UART menu by default (send
+`B` to benchmark). To switch to a raw workload loop for Picoscope
+measurement, see Switching firmware below.
+
+**Check area utilisation without flashing:**
+```bash
+make icebreaker.bin
+```
+Watch the `ICESTORM_LC` line in the nextpnr output.
+
+### Switching firmware
+
+The `FW` variable selects the C source compiled into the firmware binary.
+Make uses timestamps to decide whether to recompile — always `touch` the
+source file when switching to force a rebuild.
+
+**Interactive mode** (UART menu with `[B]` benchmark command):
+```bash
+touch firmware.c
+make icebprog_fw
+```
+Connect via UART (115200 baud) and send `B` to measure workload cycles.
+
+**Raw workload loop** (LED toggles every iteration — for Picoscope frequency measurement):
+```bash
+touch workloads/<name>.c
+make FW=workloads/<name> icebprog_fw
+```
+For example, to measure the full Kalman filter:
+```bash
+touch workloads/kalman_filter.c
+make FW=workloads/kalman_filter icebprog_fw
+```
+Measure the LED toggle frequency on the Picoscope; cycles = `6,000,000 / f`.
+
+### Baseline toggle
+
+To measure the no-cache baseline on the same bitstream, set in `icache.v`:
+```verilog
+localparam CACHE_EN = 1'b0;
+```
+then re-synthesise with `make icebprog`. Revert to `1'b1` for the cached design.
+
 ## Hardware Measurements
 
 Measured on the iCEBreaker (iCE40UP5K) at 12 MHz with QDDR flash, via the

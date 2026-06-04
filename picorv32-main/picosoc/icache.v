@@ -1,15 +1,15 @@
-// Instruction cache: 8-set, 2-way set-associative, 8-word (32-byte) lines.
+// Instruction cache: 16-set, 2-way set-associative, 4-word (16-byte) lines.
 //
 // Data arrays use SYNCHRONOUS (registered) reads so Yosys maps them to iCE40
 // EBR block RAM instead of logic-cell flip-flops. Consequence: a hit takes
 // 2 cycles (cycle 0 = lookup / issue BRAM read, cycle 1 = compare + serve).
 // Tags/valid/LRU stay as registers (small) for combinational hit detection.
 //
-// Miss: fetch 8 words from flash into the LRU-evicted way, then serve the
+// Miss: fetch 4 words from flash into the LRU-evicted way, then serve the
 // requested word. flash_valid is driven from registered FSM state, so there
 // is no combinational loop back through spimemio.ready.
 
-module icache #(parameter NSETS = 8) (
+module icache #(parameter NSETS = 16) (
     input         clk,
     input         resetn,
 
@@ -25,10 +25,10 @@ module icache #(parameter NSETS = 8) (
     input         flash_ready,
     input  [31:0] flash_rdata
 );
-    localparam INDEX_BITS = $clog2(NSETS);            // 3
-    localparam TAG_BITS   = 24 - INDEX_BITS - 3 - 2; // 16
-    localparam LADDR_BITS = INDEX_BITS + 3;          // {index,word} = 6 bits → 64 entries
-    // Address layout: [1:0] byte | [4:2] word-in-line | [INDEX] index | [..23] tag
+    localparam INDEX_BITS = $clog2(NSETS);            // 4
+    localparam TAG_BITS   = 24 - INDEX_BITS - 2 - 2; // 16
+    localparam LADDR_BITS = INDEX_BITS + 2;          // {index,word} = 6 bits → 64 entries
+    // Address layout: [1:0] byte | [3:2] word-in-line | [INDEX] index | [..23] tag
 
     localparam CACHE_EN = 1'b1;
     //localparam CACHE_EN = 1'b0; // bypass cache for baseline measurement
@@ -48,8 +48,8 @@ module icache #(parameter NSETS = 8) (
     reg                lru    [0:NSETS-1]; // 0 = evict way0 next, 1 = evict way1 next
 
     // Data — synchronous-read memories → inferred as EBR block RAM
-    reg [31:0] data0 [0:(NSETS*8)-1];
-    reg [31:0] data1 [0:(NSETS*8)-1];
+    reg [31:0] data0 [0:(NSETS*4)-1];
+    reg [31:0] data1 [0:(NSETS*4)-1];
 
     integer kk;
     initial begin
@@ -62,9 +62,9 @@ module icache #(parameter NSETS = 8) (
 
     // -------------------------------------------------------
     // Live address decomposition
-    wire [2:0]            word  = cpu_addr[4:2];
-    wire [INDEX_BITS-1:0] index = cpu_addr[4+INDEX_BITS:5];
-    wire [TAG_BITS-1:0]   tag   = cpu_addr[23:5+INDEX_BITS];
+    wire [1:0]            word  = cpu_addr[3:2];
+    wire [INDEX_BITS-1:0] index = cpu_addr[3+INDEX_BITS:4];
+    wire [TAG_BITS-1:0]   tag   = cpu_addr[23:4+INDEX_BITS];
 
     // Combinational hit detection (tags are registers)
     wire hit0_c = CACHE_EN && cpu_valid && valid0[index] && (tag0[index] == tag);
@@ -84,8 +84,8 @@ module icache #(parameter NSETS = 8) (
     reg                   hit0_r, hit1_r;
     reg [INDEX_BITS-1:0]  index_r;
     reg [TAG_BITS-1:0]    tag_r;
-    reg [2:0]             word_r;
-    reg [2:0]             fc;      // fill word counter
+    reg [1:0]             word_r;
+    reg [1:0]             fc;      // fill word counter
     reg                   evict_r; // way to evict for this fill
     reg [31:0]            ret;     // requested word captured during fill
 
@@ -143,7 +143,7 @@ module icache #(parameter NSETS = 8) (
 
                         if (fc == word_r) ret <= flash_rdata;
 
-                        if (fc == 3'd7) begin
+                        if (fc == 2'd3) begin
                             // Line complete — commit tag/valid, flip LRU
                             if (evict_r == 1'b0) begin
                                 tag0[index_r]   <= tag_r;

@@ -14,7 +14,9 @@
 *.rpt
 
 # Final bitstream (generated, not source)
-*.bin
+icebreaker_fw.bin
+icebreaker_fw.hex
+icebreaker_fw.elf
 
 # Synthesised Verilog (post-synthesis)
 *_syn.v
