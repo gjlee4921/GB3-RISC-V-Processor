@@ -172,7 +172,9 @@ speedup is real and consistent across both measurement methods.
 |---|---|---|---|---|
 | No cache (`CACHE_EN = 0`) | 175,468,865 | `0x0a5fdd41` | 34.07 mHz | 175,468,000 ✓ |
 | With cache (`CACHE_EN = 1`) | 15,981,621 | `0x00f3da35` | 375.8 mHz | 15,981,000 ✓ |
-| **Speedup** | **11.0×** | | **11.0×** | |
+| **Speedup (cache vs no cache)** | **11.0×** | | **11.0×** | |
+| Cache + barrel shifter (`BARREL_SHIFTER=1`) | 14,565,991 | `0x00de4267` | 412.2 mHz | 14,563,000 ✓ |
+| **Combined speedup (vs no cache, no barrel shifter)** | **12.0×** | | **12.1×** | |
 
 The full Kalman filter (with covariance prediction and online gain computation
 via matrix inversion and 64-bit fixed-point division) yields an even stronger
@@ -187,14 +189,15 @@ consistent between both measurement methods.
 
 ### Area and Timing
 
-| Metric | Result | Constraint |
-|---|---|---|
-| Logic cells (ICESTORM_LC) | 4426 / 5280 (**83%**) | < 85% (plan target) |
-| Block RAM (ICESTORM_RAM) | 10 / 30 (33%) | — |
-| Max clock (icetime) | 16.18 MHz | ≥ 12 MHz (PASS) |
+| Metric | Cache only | Cache + barrel shifter | Constraint |
+|---|---|---|---|
+| Logic cells (ICESTORM_LC) | 4426 / 5280 (83%) | 5268 / 5280 (**99%**) | must fit |
+| Block RAM (ICESTORM_RAM) | 10 / 30 (33%) | 10 / 30 (33%) | — |
+| Max clock (icetime) | 16.18 MHz | 18.86 MHz | ≥ 12 MHz (PASS) |
 
 The cache data arrays occupy block RAM (RAM utilisation rose from the
-baseline's 4/30 to 10/30), keeping logic-cell usage within the 85% area budget.
+baseline's 4/30 to 10/30). The barrel shifter adds 842 logic cells, pushing
+utilisation to 99% (12 cells spare), while timing still passes comfortably.
 
 ## Design Evolution (Area Constraint)
 
@@ -218,3 +221,86 @@ roughly 7,500 logic cells and letting the full 16-set design fit comfortably.
 The only functional cost is the extra hit-latency cycle, which is immaterial
 against the QDDR flash miss penalty. This also matches the project plan's
 assumption that the cache would use block RAM rather than logic cells.
+
+## ENABLE_DIV, Data Cache Attempt, and Barrel Shifter
+
+### ENABLE_DIV: required for the full Kalman filter
+
+The full Kalman filter (`kalman_filter.c`) uses fixed-point division via
+`fdiv()`. The compiler emits this as a call to `__divdi3`, a 64-bit
+software-division routine that issues RV32IM hardware `DIV` instructions.
+With `ENABLE_DIV=0` (the PicoSoC default), PicoRV32 stalls indefinitely
+waiting for a PCPI coprocessor that is never present — the processor hangs
+on the first division instruction. `ENABLE_DIV=1` was therefore a hard
+requirement to run the full Kalman filter on hardware at all.
+
+### Data cache: attempted and rejected
+
+With the instruction cache delivering an 11× speedup, a data cache for the
+`.rodata` constant matrices (read from flash on every filter step) was the
+natural next optimisation. Two designs were synthesised alongside the
+existing icache and `ENABLE_DIV` logic:
+
+| Design | Logic cells | Result |
+|---|---|---|
+| 8-set, 2-way associative, 4-word lines | 6038 / 5280 (114%) | does not fit |
+| 8-set, direct-mapped, 4-word lines | 5645 / 5280 (106%) | does not fit |
+
+Even the minimal direct-mapped design exceeded the device capacity. Reducing
+to ≤ 4 sets would fit but covers fewer than 64 bytes — not enough to hold a
+single matrix, giving a negligible hit rate. The data cache was abandoned as
+incompatible with the remaining area budget.
+
+### Barrel shifter: chosen as the viable alternative
+
+With a data cache ruled out, the next bottleneck is compute CPI. The Q8
+fixed-point multiply (`fmul`) performs `>>8` on every product; without a
+barrel shifter, PicoRV32 executes this as 8 sequential 1-bit shifts (~8
+cycles). The full Kalman filter calls `fmul` tens of thousands of times per
+iteration, making iterative shifts a significant fraction of the remaining
+runtime after cache removes fetch stalls.
+
+`BARREL_SHIFTER=1` replaces all shift instructions with single-cycle
+hardware. It costs 842 logic cells (pushing utilisation to 99%) but timing
+still passes comfortably (18.86 MHz vs 12 MHz required):
+
+| Metric | Cache only | Cache + barrel shifter |
+|---|---|---|
+| Logic cells | 4426 / 5280 (83%) | 5268 / 5280 (99%) |
+| Full Kalman cycles | 15,981,621 | 14,565,991 |
+| Improvement | — | 1.10× (9.7% faster) |
+| Combined speedup vs baseline | 11.0× | **12.0×** |
+
+The 9.7% gain is consistent with `>>8` being a real but secondary cost:
+matrix-multiply loops and hardware division dominate the remaining compute
+time after the cache removes the fetch bottleneck.
+
+### Cache geometry exploration: 8-set/8-word variant
+
+As a follow-up experiment, the cache geometry was changed from 16-set/4-word
+lines to 8-set/8-word lines (keeping 2-way associativity and the barrel
+shifter). Total capacity is identical — 8 × 2 × 8 × 4 = 512 bytes — but
+the trade-off between sets and line width differs:
+
+- **Fewer sets (8 vs 16):** reduces the tag/valid/LRU register count, saving
+  area, but increases the risk of conflict misses for workloads with many
+  distinct hot regions mapping to the same set.
+- **Wider lines (8 vs 4 words):** fetches 32 bytes per miss instead of 16,
+  improving spatial locality for sequential code, but a cold miss now costs
+  twice as many flash transactions.
+
+Synthesis and measurement results on the full Kalman filter:
+
+| Metric | 16-set / 4-word | 8-set / 8-word |
+|---|---|---|
+| Logic cells (ICESTORM_LC) | 5268 / 5280 (99%) | 5177 / 5280 (98%) |
+| Area saving | — | 91 LC (1%) |
+| Full Kalman cycles (`[B]`) | 14,565,991 (`0x00de4267`) | 14,617,889 (`0x00df0d21`) |
+| Picoscope frequency | 412.2 mHz | 407.8 mHz |
+| Calculated cycles (Picoscope) | 14,563,000 ✓ | 14,717,000 ✓ |
+| Performance vs 16-set/4-word | — | −0.36% (51,898 cycles slower) |
+
+The 8-set/8-word variant saves 91 logic cells at a cost of 0.36% slower
+execution. Both Picoscope measurements independently confirm the rdcycle
+results. The performance difference is within normal run-to-run variation
+and both designs return `0x6C` on the 7-segment display.

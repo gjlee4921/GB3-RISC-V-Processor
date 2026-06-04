@@ -118,7 +118,7 @@ module icebreaker (
 	end
 
 	picosoc #(
-		.BARREL_SHIFTER(0),
+		.BARREL_SHIFTER(1),
 		.ENABLE_MUL(0),
 		.ENABLE_DIV(1),
 		.ENABLE_FAST_MUL(1),
