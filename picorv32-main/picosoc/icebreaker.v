@@ -48,11 +48,38 @@ module icebreaker (
 );
 	parameter integer MEM_WORDS = 32768;
 
+	// PLL: 12 MHz crystal → 18 MHz system clock
+	// DIVF=47, DIVQ=5: VCO = 12*(47+1) = 576 MHz, output = 576/32 = 18 MHz
+	// Define NO_PLL at synthesis time to bypass (baseline uses 12 MHz directly)
+`ifndef NO_PLL
+	wire clk_pll;
+	wire pll_locked;
+	SB_PLL40_PAD #(
+		.FEEDBACK_PATH("SIMPLE"),
+		.DIVR(4'b0000),
+		.DIVF(7'b0101111),   // 47
+		.DIVQ(3'b101),       // /32
+		.FILTER_RANGE(3'b001)
+	) pll (
+		.PACKAGEPIN   (clk),
+		.PLLOUTGLOBAL (clk_pll),
+		.LOCK         (pll_locked),
+		.RESETB       (1'b1),
+		.BYPASS       (1'b0)
+	);
+`else
+	wire clk_pll = clk;
+	wire pll_locked = 1'b1;
+`endif
+
 	reg [5:0] reset_cnt = 0;
 	wire resetn = &reset_cnt;
 
-	always @(posedge clk) begin
-		reset_cnt <= reset_cnt + !resetn;
+	always @(posedge clk_pll) begin
+		if (!pll_locked)
+			reset_cnt <= 0;
+		else
+			reset_cnt <= reset_cnt + !resetn;
 	end
 
 	wire [7:0] leds;
@@ -94,12 +121,12 @@ module icebreaker (
 	assign { P1A10, P1A9, P1A8, P1A7, P1A4, P1A3, P1A2, P1A1 } = seven_segment;
 	reg [7:0] seg7_val;
 	seven_seg_ctrl seven_segment_ctrl (
-		.CLK(clk),
+		.CLK(clk_pll),
 		.din(seg7_val),
 		.dout(seven_segment)
 	);
 
-	always @(posedge clk) begin
+	always @(posedge clk_pll) begin
 		if (!resetn) begin
 			gpio <= 0;
 			seg7_val <= 0;
@@ -125,7 +152,7 @@ module icebreaker (
 		.ENABLE_COMPRESSED(0),
 		.MEM_WORDS(MEM_WORDS)
 	) soc (
-		.clk          (clk         ),
+		.clk          (clk_pll     ),
 		.resetn       (resetn      ),
 
 		.ser_tx       (ser_tx      ),

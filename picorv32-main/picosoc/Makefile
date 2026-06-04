@@ -65,10 +65,10 @@ icebsim: icebreaker_tb.vvp icebreaker_fw.hex
 icebsynsim: icebreaker_syn_tb.vvp icebreaker_fw.hex
 	vvp -N $< +firmware=icebreaker_fw.hex
 
-icebreaker.json: icebreaker.v ice40up5k_spram.v spimemio.v simpleuart.v picosoc.v ../picorv32.v icache.v
+icebreaker.json: icebreaker.v ice40up5k_spram.v spimemio.v simpleuart.v picosoc.v ../picorv32.v icache.v dcache.v
 	yosys -ql icebreaker.log -p 'synth_ice40 -dsp -top icebreaker -json icebreaker.json' $^
 
-icebreaker_tb.vvp: icebreaker_tb.v icebreaker.v ice40up5k_spram.v spimemio.v simpleuart.v picosoc.v ../picorv32.v spiflash.v icache.v
+icebreaker_tb.vvp: icebreaker_tb.v icebreaker.v ice40up5k_spram.v spimemio.v simpleuart.v picosoc.v ../picorv32.v spiflash.v icache.v dcache.v
 	iverilog -s testbench -o $@ $^ `yosys-config --datdir/ice40/cells_sim.v` -DNO_ICE40_DEFAULT_ASSIGNMENTS
 
 icebreaker_syn_tb.vvp: icebreaker_tb.v icebreaker_syn.v spiflash.v
@@ -78,10 +78,10 @@ icebreaker_syn.v: icebreaker.json
 	yosys -p 'read_json icebreaker.json; write_verilog icebreaker_syn.v'
 
 icebreaker.asc: icebreaker.pcf icebreaker.json
-	nextpnr-ice40 --freq 13 --up5k --package sg48 --asc icebreaker.asc --pcf icebreaker.pcf --json icebreaker.json
+	nextpnr-ice40 --freq 18 --up5k --package sg48 --asc icebreaker.asc --pcf icebreaker.pcf --json icebreaker.json
 
 icebreaker.bin: icebreaker.asc
-	icetime -d up5k -c 12 -mtr icebreaker.rpt icebreaker.asc
+	icetime -d up5k -c 18 -mtr icebreaker.rpt icebreaker.asc
 	icepack icebreaker.asc icebreaker.bin
 
 icebprog: icebreaker.bin icebreaker_fw.bin
@@ -97,7 +97,7 @@ icebreaker_nocache.json: icebreaker.v ice40up5k_spram.v spimemio.v simpleuart.v 
 	yosys -ql icebreaker_nocache.log -p 'synth_ice40 -dsp -top icebreaker -json icebreaker_nocache.json' $^
 
 icebreaker_nocache.asc: icebreaker.pcf icebreaker_nocache.json
-	nextpnr-ice40 --freq 13 --up5k --package sg48 --asc icebreaker_nocache.asc --pcf icebreaker.pcf --json icebreaker_nocache.json
+	nextpnr-ice40 --freq 18 --up5k --package sg48 --asc icebreaker_nocache.asc --pcf icebreaker.pcf --json icebreaker_nocache.json
 
 icebreaker_nocache.bin: icebreaker_nocache.asc
 	icetime -d up5k -c 12 -mtr icebreaker_nocache.rpt icebreaker_nocache.asc
@@ -110,7 +110,7 @@ icebprog_nocache: icebreaker_nocache.bin icebreaker_fw.bin
 # Stock baseline: original PicoSoC defaults (ENABLE_IRQ=1, ENABLE_COUNTERS=1),
 # no icache. Used as the unmodified starting point for the three-way comparison.
 icebreaker_baseline.json: icebreaker.v ice40up5k_spram.v spimemio.v simpleuart.v picosoc_baseline.v ../picorv32.v
-	yosys -ql icebreaker_baseline.log -p 'synth_ice40 -dsp -top icebreaker -json icebreaker_baseline.json' $^
+	yosys -D NO_PLL -ql icebreaker_baseline.log -p 'synth_ice40 -dsp -top icebreaker -json icebreaker_baseline.json' $^
 
 icebreaker_baseline.asc: icebreaker.pcf icebreaker_baseline.json
 	nextpnr-ice40 --freq 13 --up5k --package sg48 --asc icebreaker_baseline.asc --pcf icebreaker.pcf --json icebreaker_baseline.json
