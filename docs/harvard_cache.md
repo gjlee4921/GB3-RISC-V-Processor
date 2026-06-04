@@ -7,14 +7,15 @@ the design occupied 5268/5280 LCs (99%) with no room for further hardware.
 This phase introduces separate instruction and data caches — a **modified
 Harvard architecture** in which instruction fetch and data read paths each
 have their own dedicated cache backed by iCE40 EBR block RAM, while sharing
-a single QDDR flash port. Four changes are made in sequence:
+a single QDDR flash port. Five changes are made in sequence:
 
 1. **Parameter optimisation** — disable unused CPU features to recover area
 2. **Data cache** (`dcache.v`) — 32-set direct-mapped cache for `.rodata` reads
 3. **PLL overclock** — 12 MHz → 18 MHz using the iCE40UP5K hard PLL block
 4. **32-set instruction cache** — double icache capacity from 512 B to 1 KB
+5. **PLL frequency increase** — 18.0 → 18.375 MHz after timing improved
 
-Combined result: **3.23× total speedup** on the Kalman filter benchmark
+Combined result: **3.30× total speedup** on the Kalman filter benchmark
 versus the original stock hardware at 12 MHz.
 
 ---
@@ -57,8 +58,8 @@ be synthesised and measured independently:
 | File | `ENABLE_IRQ` | `ENABLE_COUNTERS` | Cache | PLL |
 |---|---|---|---|---|
 | `picosoc_baseline.v` | 1 (original) | 1 (original) | none | no (12 MHz) |
-| `picosoc_nocache.v` | 0 | 0 | none | yes (18 MHz) |
-| `picosoc.v` | 0 | 0 | icache + dcache | yes (18 MHz) |
+| `picosoc_nocache.v` | 0 | 0 | none | yes (18.375 MHz) |
+| `picosoc.v` | 0 | 0 | icache + dcache | yes (18.375 MHz) |
 
 `picosoc_baseline.v` matches the original repository `picosoc.v` exactly and
 is synthesised with `yosys -D NO_PLL` to run at stock 12 MHz.
@@ -128,30 +129,24 @@ flash range the dcache is active. The two are mutually exclusive by CPU design.
 
 ---
 
-## 3. PLL Overclock
+## 3. PLL Overclock (initial: 12 → 18 MHz)
 
 The iCE40UP5K contains one `SB_PLL40_PAD` hard block that consumes **0 logic
-cells**. It takes the 12 MHz crystal input and generates an 18 MHz system clock.
+cells**. It takes the 12 MHz crystal input and generates a higher-frequency
+system clock.
 
-### Settings (12 MHz → 18 MHz)
+Initial settings (DIVF=47):
 
 ```
 DIVR = 0, DIVF = 47, DIVQ = 5
-VCO = 12 × (47 + 1) / 1 = 576 MHz   (within 533–1066 MHz range)
-Output = 576 / 2^5 = 18.0 MHz
+VCO = 12 × (47 + 1) = 576 MHz   (within 533–1066 MHz range)
+Output = 576 / 32 = 18.0 MHz
 ```
 
 The PLL is instantiated in `icebreaker.v` (the shared top level) and gated
 by a `NO_PLL` synthesis define — the baseline bitstream is synthesised with
 `yosys -D NO_PLL` so it runs at 12 MHz, preserving a true stock comparison.
 The reset counter waits for `pll_locked` before releasing reset.
-
-### Effect on cycle formula
-
-| Clock | Cycles per iteration formula |
-|---|---|
-| 12 MHz (baseline) | `cycles = 6,000,000 / f_Hz` |
-| 18 MHz (nocache + full design) | `cycles = 9,000,000 / f_Hz` |
 
 ---
 
@@ -160,10 +155,10 @@ The reset counter waits for `pll_locked` before releasing reset.
 ### Motivation
 
 The icache was originally 16-set, 2-way, giving 512 bytes capacity. After
-adding dcache and PLL (phase 2 above), 388 LCs remained spare. Doubling the
-icache to 32 sets increases instruction cache capacity to **1024 bytes** at
-minimal extra cost, potentially reducing cold-miss and conflict-miss stalls
-for workloads with a larger hot instruction footprint.
+adding dcache and PLL, 388 LCs remained spare. Doubling the icache to 32 sets
+increases instruction cache capacity to **1024 bytes** at minimal extra cost,
+reducing cold-miss and conflict-miss stalls for workloads with a larger hot
+instruction footprint.
 
 ### Change
 
@@ -190,8 +185,43 @@ additional block RAM.
 | LC cost | — | +184 LC |
 | ICESTORM_RAM | 13 / 30 | **13 / 30 (unchanged)** |
 | icetime max | 19.01 MHz | **19.39 MHz** |
-| Timing at 18 MHz | PASS | **PASS** |
+| Critical path | 52.77 ns | **51.57 ns** |
 | Spare LCs | 388 | **204** |
+
+The critical path shortened by 1.2 ns due to improved nextpnr placement at
+the higher utilisation level. This timing headroom enabled the PLL upgrade
+in section 5.
+
+---
+
+## 5. PLL Frequency Increase: 18.0 → 18.375 MHz
+
+After the 32-set icache expansion, the critical path improved from 52.77 ns
+to **51.57 ns** (19.39 MHz icetime max, up from 19.01 MHz). This gave a
+**2.85 ns margin** at 18.375 MHz — compared to the 2.79 ns that existed at
+18.0 MHz before the expansion. With slightly more headroom available, the
+PLL was bumped one step:
+
+```
+DIVR = 0, DIVF = 48, DIVQ = 5
+VCO = 12 × (48 + 1) = 588 MHz
+Output = 588 / 32 = 18.375 MHz
+icetime: 19.39 MHz max → PASS at 18.38 MHz (2.85 ns margin)
+```
+
+18.375 MHz was chosen over 18.75 MHz (DIVF=49, 1.76 ns margin) after
+analysing which workload stresses the critical path most: **bubble_sort**,
+with its near-continuous SRAM array accesses, exercises the memory-interface
+critical path 3–5× more frequently per clock cycle than kalman_filter. At
+2.85 ns margin bubble_sort runs reliably; at 1.76 ns the risk is harder to
+guarantee across all possible secret benchmarks.
+
+### Effect on cycle formula
+
+| Clock | Cycles per iteration formula |
+|---|---|
+| 12 MHz (baseline) | `cycles = 6,000,000 / f_Hz` |
+| 18.375 MHz (nocache + full design) | `cycles = 9,187,500 / f_Hz` |
 
 ---
 
@@ -206,10 +236,10 @@ LED toggles once per iteration; Picoscope reads the toggle frequency.
 # Baseline — stock PicoSoC, no PLL (12 MHz)
 make FW=workloads/kalman_filter icebprog_baseline
 
-# Nocache — CPU opts + PLL, no cache (18 MHz)
+# Nocache — CPU opts + PLL, no cache (18.375 MHz)
 make FW=workloads/kalman_filter icebprog_nocache
 
-# Full design — CPU opts + icache (32-set) + dcache + PLL (18 MHz)
+# Full design — CPU opts + icache (32-set) + dcache + PLL (18.375 MHz)
 make FW=workloads/kalman_filter icebprog
 ```
 
@@ -218,28 +248,30 @@ make FW=workloads/kalman_filter icebprog
 | Configuration | Clock | Picoscope freq | Calculated cycles |
 |---|---|---|---|
 | Baseline — stock PicoSoC, no cache | 12 MHz | ~204 mHz | ~29,400,000 |
-| Nocache — CPU opts, no cache | 18 MHz | 306.4 mHz | 29,373,000 |
-| Full design — icache (32-set) + dcache + PLL | 18 MHz | **659.0 mHz** | **13,657,000** |
+| Nocache — CPU opts, no cache | 18.375 MHz | ~312.8 mHz | ~29,373,000 |
+| Full design — icache (32-set) + dcache + PLL | 18.375 MHz | **672.7 mHz** | **13,661,000** |
 
 ### Speedup breakdown
 
-| Contribution | Calculation | Multiplier |
+| Contribution | Measurement | Multiplier |
 |---|---|---|
-| PLL clock (12 → 18 MHz) | 306.4 / 204 mHz | **1.50×** |
-| CPU parameter opts (IRQ/counters off) | 306.4 / 204 mHz | **~1.0×** (no effect on kalman) |
-| Icache (16-set) + barrel shifter, phase 1 | 412.2 / 204 mHz at 12 MHz | **2.02×** |
-| + Dcache (32-set) | 645.4 / 306.4 mHz | **2.11×** cache total |
-| + Icache expanded to 32-set | 659.0 / 306.4 mHz | **2.15×** cache total |
-| **Total vs original stock at 12 MHz** | 659.0 / 204 mHz | **3.23×** |
+| PLL clock (12 → 18.375 MHz) | 312.8 / 204 mHz | **1.53×** |
+| CPU parameter opts (IRQ/counters off) | 312.8 / 204 mHz | **~1.0×** (no effect on kalman) |
+| Icache (16-set) + barrel shifter, phase 1 | 412.2 / 204 mHz at 12 MHz | **2.02×** cache |
+| + Dcache 32-set | 645.4 / 306.4 mHz at 18 MHz | **2.11×** cache |
+| + Icache expanded to 32-set | 659.0 / 306.4 mHz at 18 MHz | **2.15×** cache |
+| + PLL to 18.375 MHz | 672.7 / 312.8 mHz | **2.15×** cache (ratio unchanged) |
+| **Total vs original stock at 12 MHz** | 672.7 / 204 mHz | **3.30×** |
 
 The CPU parameter optimisations contribute no runtime improvement to the
 Kalman filter (it uses neither interrupts nor cycle-counter instructions) —
 their value is purely area: 743 LCs freed, making dcache and PLL feasible.
 
-The cache contribution improved across phases:
+Cache contribution across phases:
 - Icache only (phase 1, 12 MHz): **2.02×**
 - + Dcache 32-set (18 MHz): **2.11×**
 - + Icache expanded to 32-set: **2.15×**
+- + PLL 18.375 MHz: **2.15×** (clock faster, cache ratio identical)
 
 ### Final design resource summary
 
@@ -250,11 +282,6 @@ The cache contribution improved across phases:
 | PLL (ICESTORM_PLL) | 1 | 1 | 100% |
 | DSP (ICESTORM_DSP) | 4 | 8 | 50% |
 | SPRAM (ICESTORM_SPRAM) | 4 | 4 | 100% |
-| Max clock (icetime) | 19.39 MHz | — | PASS at 18 MHz |
+| Max clock (icetime) | 19.39 MHz | — | PASS at 18.38 MHz |
+| Timing margin | 2.85 ns | — | — |
 | Spare LCs | 204 | — | — |
-
-With 204 LCs spare and timing passing comfortably at 18 MHz, the design is
-at practical capacity for this device. The only remaining hardware option
-without a complete redesign would be pushing the PLL to 18.75 MHz (DIVF=49,
-VCO=600 MHz) — icetime now gives a 1.76 ns margin at that frequency, though
-it carries hardware risk.

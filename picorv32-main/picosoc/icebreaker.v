@@ -48,8 +48,8 @@ module icebreaker (
 );
 	parameter integer MEM_WORDS = 32768;
 
-	// PLL: 12 MHz crystal → 18 MHz system clock
-	// DIVF=47, DIVQ=5: VCO = 12*(47+1) = 576 MHz, output = 576/32 = 18 MHz
+	// PLL: 12 MHz crystal → 18.375 MHz system clock
+	// DIVF=48, DIVQ=5: VCO = 12*(48+1) = 588 MHz, output = 588/32 = 18.375 MHz
 	// Define NO_PLL at synthesis time to bypass (baseline uses 12 MHz directly)
 `ifndef NO_PLL
 	wire clk_pll;
@@ -57,7 +57,7 @@ module icebreaker (
 	SB_PLL40_PAD #(
 		.FEEDBACK_PATH("SIMPLE"),
 		.DIVR(4'b0000),
-		.DIVF(7'b0101111),   // 47
+		.DIVF(7'b0110000),   // 48
 		.DIVQ(3'b101),       // /32
 		.FILTER_RANGE(3'b001)
 	) pll (
