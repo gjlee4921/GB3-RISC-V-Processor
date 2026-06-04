@@ -207,4 +207,5 @@ was therefore taken as the complete design at this stage, with a final
 speedup of **2.02×** on the Kalman filter benchmark at 12 MHz.
 
 Further improvements (area recovery via parameter optimisation, data cache,
-and PLL overclock) are documented in `docs/datacache.md`.
+PLL overclock, and 32-set icache expansion) are documented in
+`docs/harvard_cache.md`.

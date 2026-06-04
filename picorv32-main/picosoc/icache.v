@@ -1,4 +1,5 @@
-// Instruction cache: 16-set, 2-way set-associative, 4-word (16-byte) lines.
+// Instruction cache: 32-set, 2-way set-associative, 4-word (16-byte) lines.
+// Total capacity: 32 × 2 × 4 × 4 = 1024 bytes.
 //
 // Data arrays use SYNCHRONOUS (registered) reads so Yosys maps them to iCE40
 // EBR block RAM instead of logic-cell flip-flops. Consequence: a hit takes
@@ -9,7 +10,7 @@
 // requested word. flash_valid is driven from registered FSM state, so there
 // is no combinational loop back through spimemio.ready.
 
-module icache #(parameter NSETS = 16) (
+module icache #(parameter NSETS = 32) (
     input         clk,
     input         resetn,
 
@@ -25,9 +26,9 @@ module icache #(parameter NSETS = 16) (
     input         flash_ready,
     input  [31:0] flash_rdata
 );
-    localparam INDEX_BITS = $clog2(NSETS);            // 4
-    localparam TAG_BITS   = 24 - INDEX_BITS - 2 - 2; // 16
-    localparam LADDR_BITS = INDEX_BITS + 2;          // {index,word} = 6 bits → 64 entries
+    localparam INDEX_BITS = $clog2(NSETS);            // 5
+    localparam TAG_BITS   = 24 - INDEX_BITS - 2 - 2; // 15
+    localparam LADDR_BITS = INDEX_BITS + 2;          // {index,word} = 7 bits → 128 entries
     // Address layout: [1:0] byte | [3:2] word-in-line | [INDEX] index | [..23] tag
 
     localparam CACHE_EN = 1'b1;
