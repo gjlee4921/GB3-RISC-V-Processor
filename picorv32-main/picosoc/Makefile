@@ -91,6 +91,22 @@ icebprog: icebreaker.bin icebreaker_fw.bin
 icebprog_fw: icebreaker_fw.bin
 	iceprog -o 1M icebreaker_fw.bin
 
+# True no-cache baseline: picosoc_nocache.v routes instructions directly to
+# spimemio (1 word per fetch), bypassing the icache module entirely.
+icebreaker_nocache.json: icebreaker.v ice40up5k_spram.v spimemio.v simpleuart.v picosoc_nocache.v ../picorv32.v
+	yosys -ql icebreaker_nocache.log -p 'synth_ice40 -dsp -top icebreaker -json icebreaker_nocache.json' $^
+
+icebreaker_nocache.asc: icebreaker.pcf icebreaker_nocache.json
+	nextpnr-ice40 --freq 13 --up5k --package sg48 --asc icebreaker_nocache.asc --pcf icebreaker.pcf --json icebreaker_nocache.json
+
+icebreaker_nocache.bin: icebreaker_nocache.asc
+	icetime -d up5k -c 12 -mtr icebreaker_nocache.rpt icebreaker_nocache.asc
+	icepack icebreaker_nocache.asc icebreaker_nocache.bin
+
+icebprog_nocache: icebreaker_nocache.bin icebreaker_fw.bin
+	iceprog icebreaker_nocache.bin
+	iceprog -o 1M icebreaker_fw.bin
+
 icebreaker_sections.lds: sections.lds
 	$(CROSS)cpp -P -DICEBREAKER -o $@ $^
 
@@ -128,7 +144,8 @@ clean:
 	rm -f hx8kdemo_syn.v hx8kdemo_syn_tb.vvp hx8kdemo_tb.vvp
 	rm -f icebreaker.json icebreaker.log icebreaker.asc icebreaker.rpt icebreaker.bin
 	rm -f icebreaker_syn.v icebreaker_syn_tb.vvp icebreaker_tb.vvp
+	rm -f icebreaker_nocache.json icebreaker_nocache.log icebreaker_nocache.asc icebreaker_nocache.rpt icebreaker_nocache.bin
 
 .PHONY: spiflash_tb clean
 .PHONY: hx8kprog hx8kprog_fw hx8ksim hx8ksynsim
-.PHONY: icebprog icebprog_fw icebsim icebsynsim
+.PHONY: icebprog icebprog_fw icebsim icebsynsim icebprog_nocache

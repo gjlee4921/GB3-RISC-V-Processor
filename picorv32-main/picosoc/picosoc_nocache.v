@@ -111,11 +111,6 @@ module picosoc (
 	wire data_flash_req = mem_valid && !mem_instr &&
 	                      (mem_addr >= 4*MEM_WORDS) && (mem_addr < 32'h 0200_0000);
 
-	wire icache_cpu_ready;
-	wire [31:0] icache_cpu_rdata;
-	wire icache_flash_valid;
-	wire [23:0] icache_flash_addr;
-
 	wire spimem_ready  = spimem_flash_ready;
 	wire [31:0] spimem_rdata = spimem_flash_rdata;
 

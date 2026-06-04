@@ -75,7 +75,7 @@ giving a clean no-cache baseline on the same bitstream structure.
 
 The measurement workload is a Kalman filter, chosen because it stresses every
 cache feature: a large instruction footprint (for set-associativity and wide
-lines) and repeatedly-read constant matrices in flash (for a future data cache).
+lines) and repeatedly-read constant matrices in flash.
 
 Two versions exist in `workloads/`, and it is important to be precise about
 which one the headline measurement uses:
@@ -132,8 +132,7 @@ fixed-point code on a host PC before trusting the board.
 
 The matrices reside in flash (confirmed: the linker script places `.rodata` in
 FLASH, and the startup code does not copy it to RAM), so they are read via
-execute-in-place — relevant for a future data cache, but not cached by this
-instruction-only design.
+execute-in-place and are not cached by this instruction-only design.
 
 ## Workflow
 
@@ -311,12 +310,12 @@ incompatible with the remaining area budget.
 
 ### Barrel shifter: chosen as the viable alternative
 
-With a data cache ruled out, the next bottleneck is compute CPI. The Q8
-fixed-point multiply (`fmul`) performs `>>8` on every product; without a
-barrel shifter, PicoRV32 executes this as 8 sequential 1-bit shifts (~8
-cycles). The full Kalman filter calls `fmul` tens of thousands of times per
-iteration, making iterative shifts a significant fraction of the remaining
-runtime after cache removes fetch stalls.
+After the instruction cache removed fetch stalls, the next bottleneck is
+compute CPI. The Q8 fixed-point multiply (`fmul`) performs `>>8` on every
+product; without a barrel shifter, PicoRV32 executes this as 8 sequential
+1-bit shifts (~8 cycles). The full Kalman filter calls `fmul` tens of
+thousands of times per iteration, making iterative shifts a significant
+fraction of the remaining runtime.
 
 `BARREL_SHIFTER=1` replaces all shift instructions with single-cycle
 hardware. It costs 842 logic cells (pushing utilisation to 99%) but timing
