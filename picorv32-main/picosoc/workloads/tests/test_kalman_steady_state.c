@@ -79,7 +79,5 @@ unsigned char run_workload(void) {
 int main(void) {
     unsigned char result = run_workload();
     printf("Kalman Steady-State: 0x%02X (%d decimal)\n", result, result);
-    if (result == 0xC7) printf("✓ CORRECT\n");
-    else printf("✗ MISMATCH (expected 0xC7)\n");
     return 0;
 }

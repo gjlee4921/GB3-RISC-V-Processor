@@ -13,20 +13,17 @@
 
 ## Hardware Measurements (Picoscope on LED, iCEBreaker @ 12 MHz with QDDR flash)
 
-**Kalman Steady-State Workload**
+All measurements use `icebreaker.bin` (cache + barrel shifter) vs `icebreaker_nocache.bin` (true no-cache baseline).
+LED toggles once per `run_workload()` execution; cycles = `6,000,000 / f`.
 
-| Configuration | LED1 Frequency | Execution Time (per run) | Estimated Cycles | 7-seg Result |
-|---|---|---|---|---|
-| With cache | 7.465 Hz | 67.1 ms | ~804,600 | 0xC7 ✓ |
-| No cache (`CACHE_EN = 0`) | 0.7784 Hz | 642 ms | ~7,704,000 | 0xC7 ✓ |
-| **Speedup** | **9.59×** | — | — | — |
-
-**Measurement Details:**
-- LED1 (PMOD2, GPIO bit 5, `0x20`) toggles once per `run_workload()` execution
-- One full square-wave period = 2 × execution time (two toggles)
-- Execution time = **Period / 2**
-- 7-segment display continuously shows the workload result (functional verification)
-- Both cache/no-cache configurations compute `0xC7` correctly, confirming functional transparency
+| Workload | Cache freq | No-cache freq | Cache cycles | No-cache cycles | Speedup | 7-seg |
+|---|---|---|---|---|---|---|
+| bubble_sort | 7.665 Hz | 3.906 Hz | 782,780 | 1,535,587 | **1.96×** | 0xFC ✓ |
+| fibonacci_iterative | 511.8 Hz | 263.4 Hz | 11,724 | 22,779 | **1.94×** | 0xC3 ✓ |
+| fibonacci_recursive | 25.54 Hz | 9.65 Hz | 234,924 | 621,762 | **2.65×** | 0x62 ✓ |
+| FIR | 19.15 Hz | 9.707 Hz | 313,316 | 617,904 | **1.97×** | 0x83 ✓ |
+| kalman_steady_state | 7.683 Hz | 4.144 Hz | 781,024 | 1,447,876 | **1.85×** | 0xC7 ✓ |
+| kalman_filter | 412.2 mHz | 204.2 mHz | 14,563,000 | 29,384,000 | **2.02×** | 0x6C ✓ |
 
 ## Workload File Structure (Final Testing Format)
 

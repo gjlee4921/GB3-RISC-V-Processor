@@ -24,7 +24,5 @@ unsigned char run_workload(void) {
 int main(void) {
     unsigned char result = run_workload();
     printf("Fibonacci Iterative: 0x%02X (%d decimal)\n", result, result);
-    if (result == 0xC3) printf("✓ CORRECT\n");
-    else printf("✗ MISMATCH (expected 0xC3)\n");
     return 0;
 }

@@ -106,13 +106,10 @@ significantly simplified** variant, not a full filter.
 | Covariance update `P = (I − K H) P` | ✗ | ✓ |
 | Arithmetic | Q4 integer | Q8 integer (incl. fixed-point divide) |
 
-**The headline 9.70× result below uses `kalman_steady_state.c`.** It is reported
-honestly as a steady-state / constant-gain Kalman filter: its hardcoded gain is
-an illustrative tuned value, not the exact solution of the discrete algebraic
-Riccati equation. `kalman_filter.c` implements the complete filter (heavier
-instruction footprint, even more cache-stressing) and is provided for a fuller
-demonstration; its expected output must be obtained by running the identical
-fixed-point code on a host PC before trusting the board.
+`kalman_filter.c` implements the complete filter and is the primary benchmark.
+`kalman_steady_state.c` is a lighter variant used for additional comparison.
+The expected output of `kalman_filter.c` must be verified on a host PC before
+trusting the board result.
 
 ### Steady-state workload details (`kalman_steady_state.c`)
 
@@ -184,65 +181,74 @@ make FW=workloads/kalman_filter icebprog_fw
 ```
 Measure the LED toggle frequency on the Picoscope; cycles = `6,000,000 / f`.
 
-### Baseline toggle
+### True no-cache baseline (`picosoc_nocache.v`)
 
-To measure the no-cache baseline on the same bitstream, set in `icache.v`:
-```verilog
-localparam CACHE_EN = 1'b0;
+`CACHE_EN = 0` in `icache.v` is **not** a true no-cache baseline. With
+`CACHE_EN=0`, every instruction still triggers the cache FSM to fetch all
+4 words from flash even though none are reused on the next access — making
+it approximately **6× slower** than a processor without any cache hardware.
+This artificially inflates the apparent speedup.
+
+`picosoc_nocache.v` is a separate SoC file that removes the icache module
+entirely, routing instruction fetches directly to spimemio (1 word per
+fetch). This gives the honest comparison. Two pre-built bitstreams are
+committed to the repository:
+
+- `icebreaker.bin` — cache + barrel shifter (final design, 99% LC)
+- `icebreaker_nocache.bin` — no cache, barrel shifter only (true baseline, 88% LC)
+
+**Testing any workload on both — interactive `[B]` mode:**
+```bash
+touch firmware.c
+make icebprog          # flash cache version → send B
+make icebprog_nocache  # flash no-cache version → send B
 ```
-then re-synthesise with `make icebprog`. Revert to `1'b1` for the cached design.
+
+**Testing any workload on both — Picoscope loop:**
+```bash
+touch workloads/<name>.c
+make FW=workloads/<name> icebprog          # cache
+make FW=workloads/<name> icebprog_nocache  # no cache
+```
+
+Both targets detect that the `.bin` files are already up to date and skip
+re-synthesis — switching between them takes seconds.
 
 ## Hardware Measurements
 
-Measured on the iCEBreaker (iCE40UP5K) at 12 MHz with QDDR flash, via the
-`[B]` UART workload-benchmark command. Cache vs no-cache selected by the
-`CACHE_EN` parameter in `icache.v`.
-
-### Performance — Steady-State Kalman Filter (`kalman_steady_state.c`)
-
-**Cycle count via `[B]` UART command (rdcycle measurement):**
-
-| Configuration | Cycles | Hex | Picoscope frequency | Calculated cycles |
-|---|---|---|---|---|
-| No cache (`CACHE_EN = 0`) | 7,680,714 | `0x007532ca` | 0.778 Hz | 7,680,000 ✓ |
-| With cache (`CACHE_EN = 1`) | 792,156 | `0x000c165c` | 7.45 Hz | 804,054 ✓ |
-| **Speedup** | **9.70×** | | **9.58×** | |
-
-Both configurations return `0xC7` on the 7-segment display, confirming the
-cache is functionally transparent — the same answer is computed, only faster.
-
-**Verification method:** The LED1 toggles once per workload iteration. When
-measured via Picoscope on pin 27 (LED1), the frequency f (in Hz) relates to
-execution cycles as:
-- Execution time per iteration: `T = 0.5 / f` seconds
-- At 12 MHz clock: `Cycles = T × 12,000,000 = 6,000,000 / f`
-
-The Picoscope frequency measurements (7.45 Hz cached, 0.778 Hz uncached)
-independently verify the `[B]` command cycle counts, confirming the cache
-speedup is real and consistent across both measurement methods.
+All measurements on iCEBreaker (iCE40UP5K) at 12 MHz with QDDR flash.
+Baseline is always `picosoc_nocache.bin` — a separate bitstream with the
+icache module removed entirely (1 flash read per instruction). LED toggles
+every iteration; Picoscope frequency relates to cycles as `6,000,000 / f`.
 
 ### Performance — Full Kalman Filter (`kalman_filter.c`)
 
 **Cycle count via `[B]` UART command (rdcycle measurement):**
 
-| Configuration | Cycles | Hex | Picoscope frequency | Calculated cycles |
-|---|---|---|---|---|
-| No cache (`CACHE_EN = 0`) | 175,468,865 | `0x0a5fdd41` | 34.07 mHz | 175,468,000 ✓ |
-| With cache (`CACHE_EN = 1`) | 15,981,621 | `0x00f3da35` | 375.8 mHz | 15,981,000 ✓ |
-| **Speedup (cache vs no cache)** | **11.0×** | | **11.0×** | |
-| Cache + barrel shifter (`BARREL_SHIFTER=1`) | 14,565,991 | `0x00de4267` | 412.2 mHz | 14,563,000 ✓ |
-| **Combined speedup (vs no cache, no barrel shifter)** | **12.0×** | | **12.1×** | |
+| Configuration | Cycles | Hex |
+|---|---|---|
+| True no-cache (`picosoc_nocache.bin`) | 29,376,788 | `0x01c04114` |
+| Cache only | 15,981,621 | `0x00f3da35` |
+| Cache + barrel shifter (`icebreaker.bin`) | 14,565,991 | `0x00de4267` |
+| **True speedup (cache + barrel shifter vs no-cache)** | **2.02×** | |
 
-The full Kalman filter (with covariance prediction and online gain computation
-via matrix inversion and 64-bit fixed-point division) yields an even stronger
-speedup than steady-state due to its larger instruction footprint and heavier
-cache-stressing loop nests. Both configurations return `0x6C` on the 7-segment
-display, verified against a host PC run of the identical fixed-point code.
+**Picoscope frequency measurement:**
 
-**Verification:** The Picoscope measurements independently confirm the rdcycle
-results across both cache modes. With cache, the LED toggles every 1.3 seconds
-(375.8 mHz); without cache, every 14.6 seconds (34.07 mHz). The 11.0× speedup is
-consistent between both measurement methods.
+| Configuration | Picoscope frequency | Calculated cycles |
+|---|---|---|
+| True no-cache (`picosoc_nocache.bin`) | 204.2 mHz | 29,384,000 ✓ |
+| Cache only | 375.8 mHz | 15,981,000 ✓ |
+| Cache + barrel shifter (`icebreaker.bin`) | 412.2 mHz | 14,563,000 ✓ |
+| **True speedup** | **2.02×** | |
+
+Both configurations return `0x6C` on the 7-segment display, verified against a
+host PC run of the identical fixed-point code.
+
+The remaining runtime after caching (14.6M cycles) is dominated by data reads
+from flash — the constant matrices in `.rodata` are read on every filter step
+and are not cached by this instruction-only design. Roughly half the no-cache
+runtime was instruction fetch (removed by the cache) and half is data reads +
+compute (unchanged), which is why the true speedup is 2.02×.
 
 ### Area and Timing
 

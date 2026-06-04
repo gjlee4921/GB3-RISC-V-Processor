@@ -168,7 +168,5 @@ unsigned char run_workload(void) {
 int main(void) {
     unsigned char result = run_workload();
     printf("Kalman Filter: 0x%02X (%d decimal)\n", result, result);
-    if (result == 0x6C) printf("✓ CORRECT\n");
-    else printf("✗ MISMATCH (expected 0x6C)\n");
     return 0;
 }

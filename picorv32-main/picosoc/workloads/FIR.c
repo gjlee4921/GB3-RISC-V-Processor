@@ -70,37 +70,38 @@ void setup_picosoc(void) {
 
 // --------------------------------------------------------
 
-#define SIGNAL_SIZE 10
-#define FILTER_SIZE 2
+#define SIGNAL_SIZE 100
+#define FILTER_SIZE 16
+
+static const unsigned char signal_init[SIGNAL_SIZE] = {
+    217,  43, 189,  12, 156,  78, 234,  67, 143,  29,
+    198,  54, 112, 245,  33, 167,  89, 201,  11, 178,
+     56, 223,  91, 134,  45, 187,  23, 209,  77, 155,
+    102, 241,  18, 163,  84, 220,  37, 171,  62, 248,
+      9, 145,  73, 196,  28, 183,  51, 229,  94, 137,
+    212,  41, 175,   6, 158,  82, 233,  16, 149,  70,
+    205,  38, 191,  55, 240,  25, 168,  97, 214,  44,
+    130,  87, 203,  19, 176,  61, 238,  13, 152,  79,
+    218,  48, 193,  31, 160,  95, 222,  36, 174,  58,
+    245,  21, 138,  75, 210,  46, 185,  27, 166,  92
+};
+
+static const unsigned char filter_coeffs[FILTER_SIZE] = {
+    4, 7, 2, 10, 12, 32, 20, 18, 6, 3, 24, 31, 8, 11, 15, 6
+};
 
 unsigned char run_workload(void) {
-	unsigned char signal[SIGNAL_SIZE] = {
-	217,  43, 189,  12, 156,  78, 234,  67, 143,  29
-	};
-	unsigned char filter_coeffs[FILTER_SIZE] = {
-	4, 7};
+	unsigned char signal[SIGNAL_SIZE];
+	for (int i = 0; i < SIGNAL_SIZE; i++) signal[i] = signal_init[i];
 	unsigned char output[SIGNAL_SIZE];
 	for (int i = 0; i < SIGNAL_SIZE; i++) {
 		uint32_t sum = 0;
 		for (int j = 0; j < FILTER_SIZE; j++)
 			if (i - j >= 0)
 				sum += signal[i - j] * filter_coeffs[j];
-		output[i] = sum / 11;
+		output[i] = sum / 209;
 	}
 	return output[SIGNAL_SIZE - 1];
-}
-
-unsigned char run_workload_timed(void) {
-	uint32_t t0, t1, i0, i1;
-	__asm__ volatile ("rdcycle   %0" : "=r"(t0));
-	__asm__ volatile ("rdinstret %0" : "=r"(i0));
-	unsigned char result = run_workload();
-	__asm__ volatile ("rdcycle   %0" : "=r"(t1));
-	__asm__ volatile ("rdinstret %0" : "=r"(i1));
-	print("Cycles: 0x"); print_hex(t1 - t0, 8); putchar('\n');
-	print("Instns: 0x"); print_hex(i1 - i0, 8); putchar('\n');
-	print("Result: 0x"); print_hex(result,   2); putchar('\n');
-	return result;
 }
 
 void main(void) {

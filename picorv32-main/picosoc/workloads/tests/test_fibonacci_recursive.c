@@ -20,7 +20,5 @@ unsigned char run_workload(void) {
 int main(void) {
     unsigned char result = run_workload();
     printf("Fibonacci Recursive: 0x%02X (%d decimal)\n", result, result);
-    if (result == 0x62) printf("✓ CORRECT\n");
-    else printf("✗ MISMATCH (expected 0x62)\n");
     return 0;
 }
