@@ -74,7 +74,7 @@ module picosoc (
 	parameter [0:0] ENABLE_DIV = 1;
 	parameter [0:0] ENABLE_FAST_MUL = 0;
 	parameter [0:0] ENABLE_COMPRESSED = 1;
-	parameter [0:0] ENABLE_COUNTERS = 1;
+	parameter [0:0] ENABLE_COUNTERS = 0;
 	parameter [0:0] ENABLE_IRQ_QREGS = 0;
 
 	parameter integer MEM_WORDS = 256;
@@ -154,7 +154,7 @@ module picosoc (
 		.ENABLE_MUL(ENABLE_MUL),
 		.ENABLE_DIV(ENABLE_DIV),
 		.ENABLE_FAST_MUL(ENABLE_FAST_MUL),
-		.ENABLE_IRQ(1),
+		.ENABLE_IRQ(0),
 		.ENABLE_IRQ_QREGS(ENABLE_IRQ_QREGS)
 	) cpu (
 		.clk         (clk        ),

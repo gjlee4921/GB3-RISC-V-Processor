@@ -17,6 +17,16 @@
  *
  */
 
+/* Original stock PicoSoC baseline — no icache, no GB3 CPU optimisations.
+ * ENABLE_IRQ=1 and ENABLE_COUNTERS=1 match the original picosoc.v defaults.
+ * ENABLE_DIV=1 is kept (it was already the original default and is required
+ * to run the Kalman filter benchmark without hanging on DIV instructions).
+ * Used to measure the unmodified starting point for the three-way comparison:
+ *   picosoc_baseline.v  → stock hardware
+ *   picosoc_nocache.v   → our CPU optimisations, no cache
+ *   picosoc.v           → full design (CPU optimisations + icache)
+ */
+
 `ifndef PICORV32_REGS
 `ifdef PICORV32_V
 `error "picosoc.v must be read before picorv32.v!"
@@ -29,8 +39,6 @@
 `define PICOSOC_MEM picosoc_mem
 `endif
 
-// this macro can be used to check if the verilog files in your
-// design are read in the correct order.
 `define PICOSOC_V
 
 module picosoc (
@@ -74,12 +82,12 @@ module picosoc (
 	parameter [0:0] ENABLE_DIV = 1;
 	parameter [0:0] ENABLE_FAST_MUL = 0;
 	parameter [0:0] ENABLE_COMPRESSED = 1;
-	parameter [0:0] ENABLE_COUNTERS = 0;
+	parameter [0:0] ENABLE_COUNTERS = 1;  // original default
 	parameter [0:0] ENABLE_IRQ_QREGS = 0;
 
 	parameter integer MEM_WORDS = 256;
-	parameter [31:0] STACKADDR = (4*MEM_WORDS);       // end of memory
-	parameter [31:0] PROGADDR_RESET = 32'h 0010_0000; // 1 MB into flash
+	parameter [31:0] STACKADDR = (4*MEM_WORDS);
+	parameter [31:0] PROGADDR_RESET = 32'h 0010_0000;
 	parameter [31:0] PROGADDR_IRQ = 32'h 0000_0000;
 
 	reg [31:0] irq;
@@ -103,16 +111,8 @@ module picosoc (
 	wire [3:0] mem_wstrb;
 	wire [31:0] mem_rdata;
 
-	wire spimem_flash_ready;
-	wire [31:0] spimem_flash_rdata;
-
-	wire insn_flash_req = mem_valid && mem_instr &&
-	                      (mem_addr >= 4*MEM_WORDS) && (mem_addr < 32'h 0200_0000);
-	wire data_flash_req = mem_valid && !mem_instr &&
-	                      (mem_addr >= 4*MEM_WORDS) && (mem_addr < 32'h 0200_0000);
-
-	wire spimem_ready  = spimem_flash_ready;
-	wire [31:0] spimem_rdata = spimem_flash_rdata;
+	wire spimem_ready;
+	wire [31:0] spimem_rdata;
 
 	reg ram_ready;
 	wire [31:0] ram_rdata;
@@ -149,7 +149,7 @@ module picosoc (
 		.ENABLE_MUL(ENABLE_MUL),
 		.ENABLE_DIV(ENABLE_DIV),
 		.ENABLE_FAST_MUL(ENABLE_FAST_MUL),
-		.ENABLE_IRQ(0),
+		.ENABLE_IRQ(1),           // original default
 		.ENABLE_IRQ_QREGS(ENABLE_IRQ_QREGS)
 	) cpu (
 		.clk         (clk        ),
@@ -164,15 +164,13 @@ module picosoc (
 		.irq         (irq        )
 	);
 
-	/* icache removed for no-cache baseline */
-
 	spimemio spimemio (
 		.clk    (clk),
 		.resetn (resetn),
-		.valid  (insn_flash_req || data_flash_req),
-		.ready  (spimem_flash_ready),
+		.valid  (mem_valid && mem_addr >= 4*MEM_WORDS && mem_addr < 32'h 0200_0000),
+		.ready  (spimem_ready),
 		.addr   (mem_addr[23:0]),
-		.rdata  (spimem_flash_rdata),
+		.rdata  (spimem_rdata),
 
 		.flash_csb    (flash_csb   ),
 		.flash_clk    (flash_clk   ),
@@ -229,9 +227,6 @@ module picosoc (
 	);
 endmodule
 
-// Implementation note:
-// Replace the following two modules with wrappers for your SRAM cells.
-
 module picosoc_regs (
 	input clk, wen,
 	input [5:0] waddr,
@@ -269,4 +264,3 @@ module picosoc_mem #(
 		if (wen[3]) mem[addr][31:24] <= wdata[31:24];
 	end
 endmodule
-

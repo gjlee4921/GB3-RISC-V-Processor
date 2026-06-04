@@ -107,6 +107,22 @@ icebprog_nocache: icebreaker_nocache.bin icebreaker_fw.bin
 	iceprog icebreaker_nocache.bin
 	iceprog -o 1M icebreaker_fw.bin
 
+# Stock baseline: original PicoSoC defaults (ENABLE_IRQ=1, ENABLE_COUNTERS=1),
+# no icache. Used as the unmodified starting point for the three-way comparison.
+icebreaker_baseline.json: icebreaker.v ice40up5k_spram.v spimemio.v simpleuart.v picosoc_baseline.v ../picorv32.v
+	yosys -ql icebreaker_baseline.log -p 'synth_ice40 -dsp -top icebreaker -json icebreaker_baseline.json' $^
+
+icebreaker_baseline.asc: icebreaker.pcf icebreaker_baseline.json
+	nextpnr-ice40 --freq 13 --up5k --package sg48 --asc icebreaker_baseline.asc --pcf icebreaker.pcf --json icebreaker_baseline.json
+
+icebreaker_baseline.bin: icebreaker_baseline.asc
+	icetime -d up5k -c 12 -mtr icebreaker_baseline.rpt icebreaker_baseline.asc
+	icepack icebreaker_baseline.asc icebreaker_baseline.bin
+
+icebprog_baseline: icebreaker_baseline.bin icebreaker_fw.bin
+	iceprog icebreaker_baseline.bin
+	iceprog -o 1M icebreaker_fw.bin
+
 icebreaker_sections.lds: sections.lds
 	$(CROSS)cpp -P -DICEBREAKER -o $@ $^
 
@@ -145,7 +161,8 @@ clean:
 	rm -f icebreaker.json icebreaker.log icebreaker.asc icebreaker.rpt icebreaker.bin
 	rm -f icebreaker_syn.v icebreaker_syn_tb.vvp icebreaker_tb.vvp
 	rm -f icebreaker_nocache.json icebreaker_nocache.log icebreaker_nocache.asc icebreaker_nocache.rpt icebreaker_nocache.bin
+	rm -f icebreaker_baseline.json icebreaker_baseline.log icebreaker_baseline.asc icebreaker_baseline.rpt icebreaker_baseline.bin
 
 .PHONY: spiflash_tb clean
 .PHONY: hx8kprog hx8kprog_fw hx8ksim hx8ksynsim
-.PHONY: icebprog icebprog_fw icebsim icebsynsim icebprog_nocache
+.PHONY: icebprog icebprog_fw icebsim icebsynsim icebprog_nocache icebprog_baseline

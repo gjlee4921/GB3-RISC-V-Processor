@@ -1,46 +1,3 @@
-/*
- * kalman_filter.c — Full Kalman filter benchmark
- *
- * The complete Kalman filter, including the parts that kalman_steady_state.c
- * omits: covariance propagation and online gain computation (with a matrix
- * inverse). This is computationally much heavier and therefore stresses the
- * instruction cache (and a future data cache) more than the steady-state form.
- *
- * Computed per step:
- *   predict state       x  = F x
- *   predict covariance  P  = F P F^T + Q
- *   innovation          y  = z - H x
- *   innovation cov      S  = H P H^T + R              (2x2)
- *   Kalman gain         K  = P H^T S^-1               (4x2, needs 2x2 inverse)
- *   update state        x  = x + K y
- *   update covariance   P  = (I - K H) P
- *
- * 4-state model: position and velocity in 2D (px, py, vx, vy).
- * 2 observations: noisy position measurements.
- *
- * Fixed-point arithmetic: Q8 (1.0 represented as 256). Products use 64-bit
- * intermediates and a right shift; the 2x2 inverse uses a fixed-point divide.
- * Q8 (not Q4) is used here because covariance products and the matrix inverse
- * need the extra fractional precision to stay accurate over 100 steps.
- *
- * Cache properties:
- *   Instruction cache  — many matrix-matrix loop nests plus a divide routine;
- *                        substantially larger instruction footprint than the
- *                        steady-state version, so it benefits even more from
- *                        set-associativity and 4-word lines.
- *   Data cache         — F, H, Q, R, z_step, z_noise are static const in flash
- *                        (.rodata), read every step.
- *
- * VERIFICATION: the expected return value has NOT been hand-derived (100 steps
- * of fixed-point matrix algebra with a divide each step). Before trusting the
- * hardware output, compile the SAME run_workload() on a host PC and print its
- * result — that value is the ground truth to check the board against. (Use the
- * minimal host harness pattern used for kalman_steady_state.)
- *
- * Return value: low byte of estimated px (Q8) after 100 steps, tracking an
- * object at velocity (vx=2, vy=1) units/step.
- */
-
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -151,7 +108,7 @@ static const int32_t z_noise[16][M] = {
 unsigned char run_workload(void) {
     int i, j, k, t;
 
-    // State and covariance (mutable → SRAM)
+    // State and covariance (mutable -> SRAM)
     int32_t x[N] = {0, 0, 2*ONE, 1*ONE};
     int32_t z[M] = {-16, 16};
     int32_t P[N][N];
