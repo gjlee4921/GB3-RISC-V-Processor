@@ -40,7 +40,7 @@ module testbench;
     wire ser_tx;
 
     picosoc #(
-        .BARREL_SHIFTER(0), .ENABLE_MUL(0), .ENABLE_DIV(0),
+        .BARREL_SHIFTER(0), .ENABLE_MUL(0), .ENABLE_DIV(1),
         .ENABLE_FAST_MUL(1), .ENABLE_COMPRESSED(0),
         .MEM_WORDS(256)          // 1 kB — same as icebreaker_tb.v
     ) soc (
