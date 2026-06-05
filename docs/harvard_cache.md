@@ -14,14 +14,16 @@ a single QDDR flash port. The development sequence was:
 3. **PLL overclock** — 12 MHz → 18 MHz using the iCE40UP5K hard PLL block
 4. **32-set instruction cache** — double icache capacity from 512 B to 1 KB
 5. **PLL frequency increase** — 18.0 → 18.375 MHz after timing improved
-6. **Final configuration** (§6) — reverts the icache to 16-set and re-enables
-   the cycle counters so that other teams' secret-benchmark binaries (which
-   use `rdcycle`/`rdinstret` and a different 7-seg address) run correctly
+6. **Final configuration** (§6) — re-enables the cycle counters and remaps the
+   7-segment so other teams' secret-benchmark binaries run; disables the
+   hardware divider to pay for it; and with the freed area keeps the 32-set
+   icache and pushes the clock to **18.75 MHz**
 
 > **Note:** Sections 1–5 are the development narrative. The **as-submitted**
 > configuration is defined in **§6** — read that for the final parameter set.
 > The headline benchmark is `kalman_steady_state` (the final build disables
 > the hardware divider, so the full `kalman_filter` no longer runs on it).
+> Final build: **32-set icache, divider off, counters on, 18.75 MHz, 4618 LC (87%)**.
 
 ---
 
@@ -259,13 +261,15 @@ division** — the divider is dead weight and was disabled in `icebreaker.v`
 `DIV`) can no longer run on this build. That is an accepted trade: the divider
 is the single largest CPU block, and the chosen benchmark does not use it.
 
-### 6.3 Revert the icache to 16-set
+### 6.3 Icache: 16-set transient, then restored to 32-set
 
-Even with the divider gone, the 32-set icache + counters pushed utilisation to
-~99%, where routing congestion failed timing at 18.375 MHz. Reverting the
-icache to **16-set** (`NSETS = 16` in `icache.v`, ~184 LC freed) relieves the
-congestion and restores a passing timing closure. The 32→16 reversion costs
-only ~2% on the benchmark (the 32-set expansion had only bought ~2%).
+When the counters were first re-enabled **while the divider was still present**,
+utilisation hit ~99% and routing congestion failed timing. The icache was
+temporarily reverted to 16-set to relieve it. However, once the divider was
+disabled (§6.2) it freed ~660 LC net — far more than the icache costs — so the
+**32-set icache was restored** and still fits comfortably at **87%** with a
+better timing margin than the 16-set build had. The 16-set revert was therefore
+only a transient debugging step; the final build is **32-set**.
 
 ### 6.4 Remap the 7-segment to `0x03000001`
 
@@ -286,6 +290,23 @@ if (iomem_wstrb[0] && iomem_addr[7:0] == 8'h00) gpio[7:0] <= iomem_wdata[7:0];  
 if (iomem_wstrb[1])                              seg7_val <= iomem_wdata[15:8]; // 7seg @ 0x03000001
 ```
 
+### 6.5 PLL frequency increase to 18.75 MHz
+
+Disabling the divider also shortened the critical path: icetime now reports a
+**19.72 MHz** maximum (50.71 ns path), up from 19.39 MHz. That headroom allowed
+one more PLL step:
+
+```
+DIVR = 0, DIVF = 49, DIVQ = 5
+VCO = 12 × (49 + 1) = 600 MHz
+Output = 600 / 32 = 18.75 MHz
+icetime: 19.72 MHz max → PASS at 18.75 MHz (2.62 ns margin)
+```
+
+At 18.375 MHz the 18.75 step had only 1.76 ns margin and was rejected (§5); now,
+with the divider gone, 18.75 MHz has **2.62 ns** — comparable to the margin that
+bubble_sort was already validated at — so it is safe. This is a free +2% clock.
+
 ### Final parameter set (effective, as synthesised)
 
 `icebreaker.v` instantiation overrides `picosoc.v` defaults — the values below
@@ -300,14 +321,10 @@ are what actually reach PicoRV32:
 | `ENABLE_COMPRESSED` | 0 | `icebreaker.v` | handout mandates `-march=rv32im` (no C) |
 | `ENABLE_COUNTERS` | **1** | `picosoc.v` default | secret binaries use `rdcycle`/`rdinstret` (§6.1) |
 | `ENABLE_IRQ` | 0 | `picosoc.v` | no interrupts used by any workload |
-| Instruction cache | 16-set, 2-way, 4-word | `icache.v` | reverted from 32-set for area (§6.3) |
-| Data cache | 32-set, direct-mapped, 4-word | `dcache.v` | unchanged |
+| Instruction cache | **32-set**, 2-way, 4-word (1 KB) | `icache.v` | restored after divider freed area (§6.3) |
+| Data cache | 32-set, direct-mapped, 4-word (512 B) | `dcache.v` | unchanged |
 | 7-seg address | `0x03000001` | `icebreaker.v` | secret-benchmark convention (§6.4) |
-| System clock | 18.375 MHz (PLL) | `icebreaker.v` | overclock; passes timing |
-
-> Update the resource numbers below from the final `make icebreaker.bin`
-> build log (16-set + counters on + divider off); they differ from the
-> 32-set / divider-on figures recorded in §4–5.
+| System clock | **18.75 MHz** (PLL, DIVF=49) | `icebreaker.v` | overclock; passes timing (§6.5) |
 
 ---
 
@@ -374,18 +391,35 @@ Cache contribution across phases:
 | Max clock (icetime) | 19.39 MHz | — | PASS at 18.38 MHz |
 | Spare LCs | 204 | — | — |
 
-### Resource summary — §6 final build (16-set, divider off, counters on)
+### Resource summary — §6 final build (32-set, divider off, counters on, 18.75 MHz)
 
-This is the as-submitted configuration that runs the secret-benchmark binaries.
-It is confirmed to **pass timing at 18.375 MHz**. Disabling the divider frees
-the largest CPU block, which more than offsets re-enabling the counters and
-allows the 16-set icache + dcache + counters to fit comfortably.
+This is the **as-submitted** configuration (Group 4) that runs the
+secret-benchmark binaries. Disabling the divider frees the single largest CPU
+block, which more than offsets re-enabling the counters — so even with the
+32-set icache restored, utilisation is only **87%** and timing closes at the
+higher 18.75 MHz clock.
 
-| Resource | Value |
-|---|---|
-| Logic cells (ICESTORM_LC) | _read from final `make icebreaker.bin` log_ |
-| Clock | 18.375 MHz (PLL), icetime PASS |
-| Instruction cache | 16-set, 2-way, 4-word (512 B) |
-| Data cache | 32-set, direct-mapped, 4-word (512 B) |
-| `ENABLE_DIV` / `ENABLE_COUNTERS` | 0 / 1 |
-| 7-seg address | `0x03000001` |
+| Resource | Used | Total | Utilisation |
+|---|---|---|---|
+| Logic cells (ICESTORM_LC) | **4618** | 5280 | **87%** |
+| Block RAM (ICESTORM_RAM) | 13 | 30 | 43% |
+| SB_IO | 24 | 39 | 61% |
+| Global buffers (SB_GB) | 7 | 8 | 87% |
+| PLL (ICESTORM_PLL) | 1 | 1 | 100% |
+| DSP (ICESTORM_DSP) | 4 | 8 | 50% |
+| SPRAM (ICESTORM_SPRAM) | 4 | 4 | 100% |
+| Max clock (icetime) | 19.72 MHz | — | **PASS at 18.75 MHz** |
+| Timing margin | 2.62 ns | — | (53.33 ns period − 50.71 ns path) |
+| Spare LCs | 662 | — | — |
+
+All other resource categories (SB_WARMBOOT, HFOSC, LFOSC, I2C, SPI, I3C,
+LEDDA_IP, RGBA_DRV) are 0.
+
+**Configuration:** icache 32-set/2-way/4-word (1 KB); dcache 32-set/direct/4-word
+(512 B); `ENABLE_DIV=0`, `ENABLE_COUNTERS=1`; 7-seg at `0x03000001`; 18.75 MHz PLL.
+
+Note the contrast with the §5 build (5076 LC / 96%): even after re-enabling the
+counters and keeping the 32-set icache, the final build is **4618 LC (87%)** —
+removing the divider saved ~640 LC net, confirming it was by far the most
+expensive single CPU feature and the right block to drop once the benchmark
+(`kalman_steady_state`) no longer needed it.

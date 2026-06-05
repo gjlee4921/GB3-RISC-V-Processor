@@ -1,7 +1,7 @@
-// Instruction cache: 16-set, 2-way set-associative, 4-word (16-byte) lines.
-// Total capacity: 16 × 2 × 4 × 4 = 512 bytes.
-// (16-set chosen over 32-set to leave area for ENABLE_COUNTERS, which the
-//  secret-benchmark binaries require for rdcycle/rdinstret.)
+// Instruction cache: 32-set, 2-way set-associative, 4-word (16-byte) lines.
+// Total capacity: 32 × 2 × 4 × 4 = 1024 bytes.
+// (Fits comfortably at ~87% LC now that the divider is disabled; the divider
+//  was the area hog that previously forced a 16-set revert.)
 //
 // Data arrays use SYNCHRONOUS (registered) reads so Yosys maps them to iCE40
 // EBR block RAM instead of logic-cell flip-flops. Consequence: a hit takes
@@ -12,7 +12,7 @@
 // requested word. flash_valid is driven from registered FSM state, so there
 // is no combinational loop back through spimemio.ready.
 
-module icache #(parameter NSETS = 16) (
+module icache #(parameter NSETS = 32) (
     input         clk,
     input         resetn,
 
