@@ -136,7 +136,7 @@ module icebreaker (
 				iomem_ready <= 1;
 				iomem_rdata <= gpio;
 				if (iomem_wstrb[0] && iomem_addr[7:0] == 8'h00) gpio[ 7: 0] <= iomem_wdata[ 7: 0];
-				if (iomem_wstrb[0] && iomem_addr[7:0] == 8'h04) seg7_val <= iomem_wdata[ 7: 0];
+				if (iomem_wstrb[0] && iomem_addr[7:0] == 8'h01) seg7_val <= iomem_wdata[ 7: 0];
 				if (iomem_wstrb[1]) gpio[15: 8] <= iomem_wdata[15: 8];
 				if (iomem_wstrb[2]) gpio[23:16] <= iomem_wdata[23:16];
 				if (iomem_wstrb[3]) gpio[31:24] <= iomem_wdata[31:24];
@@ -147,7 +147,7 @@ module icebreaker (
 	picosoc #(
 		.BARREL_SHIFTER(1),
 		.ENABLE_MUL(0),
-		.ENABLE_DIV(1),
+		.ENABLE_DIV(0),
 		.ENABLE_FAST_MUL(1),
 		.ENABLE_COMPRESSED(0),
 		.MEM_WORDS(MEM_WORDS)
