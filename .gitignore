@@ -14,7 +14,6 @@
 *.rpt
 
 # Final bitstream (generated, not source)
-icebreaker_fw.bin
 icebreaker_fw.hex
 icebreaker_fw.elf
 
@@ -65,3 +64,6 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 compile_flags.txt
+
+# Personal (local) files
+docs/reports/

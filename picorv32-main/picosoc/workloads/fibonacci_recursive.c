@@ -41,7 +41,7 @@ extern uint32_t sram;
 #define reg_uart_clkdiv (*(volatile uint32_t*)0x02000004)
 #define reg_uart_data   (*(volatile uint32_t*)0x02000008)
 #define reg_leds        (*(volatile uint8_t*)0x03000000)
-#define reg_7seg        (*(volatile uint8_t*)0x03000004)
+#define reg_7seg        (*(volatile uint8_t*)0x03000001)
 
 extern uint32_t flashio_worker_begin;
 extern uint32_t flashio_worker_end;
