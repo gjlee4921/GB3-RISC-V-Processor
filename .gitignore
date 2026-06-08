@@ -67,3 +67,11 @@ compile_flags.txt
 
 # Personal (local) files
 docs/reports/
+
+# Ignore logs and reports inside picorv32-main/picosoc, but allow logs in data/
+picorv32-main/picosoc/*.log
+picorv32-main/picosoc/*.rpt
+
+# Explicitly allow logs and rpt files in data/
+!data/*.log
+!data/*.rpt

@@ -100,7 +100,7 @@ icebreaker_nocache.asc: icebreaker.pcf icebreaker_nocache.json
 	nextpnr-ice40 --freq 18 --up5k --package sg48 --asc icebreaker_nocache.asc --pcf icebreaker.pcf --json icebreaker_nocache.json
 
 icebreaker_nocache.bin: icebreaker_nocache.asc
-	icetime -d up5k -c 12 -mtr icebreaker_nocache.rpt icebreaker_nocache.asc
+	icetime -d up5k -c 18.75 -mtr icebreaker_nocache.rpt icebreaker_nocache.asc
 	icepack icebreaker_nocache.asc icebreaker_nocache.bin
 
 icebprog_nocache: icebreaker_nocache.bin icebreaker_fw.bin
@@ -121,6 +121,36 @@ icebreaker_baseline.bin: icebreaker_baseline.asc
 
 icebprog_baseline: icebreaker_baseline.bin icebreaker_fw.bin
 	iceprog icebreaker_baseline.bin
+	iceprog -o 1M icebreaker_fw.bin
+
+# Direct-mapped icache (32-set, 1-way) using dcache module, no data cache.
+icebreaker_directmap.json: icebreaker.v ice40up5k_spram.v spimemio.v simpleuart.v picosoc_directmap.v ../picorv32.v dcache.v
+	yosys -ql icebreaker_directmap.log -p 'synth_ice40 -dsp -top icebreaker -json icebreaker_directmap.json' $^
+
+icebreaker_directmap.asc: icebreaker.pcf icebreaker_directmap.json
+	nextpnr-ice40 --freq 18 --up5k --package sg48 --asc icebreaker_directmap.asc --pcf icebreaker.pcf --json icebreaker_directmap.json
+
+icebreaker_directmap.bin: icebreaker_directmap.asc
+	icetime -d up5k -c 18.75 -mtr icebreaker_directmap.rpt icebreaker_directmap.asc
+	icepack icebreaker_directmap.asc icebreaker_directmap.bin
+
+icebprog_directmap: icebreaker_directmap.bin icebreaker_fw.bin
+	iceprog icebreaker_directmap.bin
+	iceprog -o 1M icebreaker_fw.bin
+
+# 2-way set-associative icache only (32-set, 2-way, 4-word lines), no data cache.
+icebreaker_icache_only.json: icebreaker.v ice40up5k_spram.v spimemio.v simpleuart.v picosoc_icache_only.v ../picorv32.v icache.v
+	yosys -ql icebreaker_icache_only.log -p 'synth_ice40 -dsp -top icebreaker -json icebreaker_icache_only.json' $^
+
+icebreaker_icache_only.asc: icebreaker.pcf icebreaker_icache_only.json
+	nextpnr-ice40 --freq 18 --up5k --package sg48 --asc icebreaker_icache_only.asc --pcf icebreaker.pcf --json icebreaker_icache_only.json
+
+icebreaker_icache_only.bin: icebreaker_icache_only.asc
+	icetime -d up5k -c 18.75 -mtr icebreaker_icache_only.rpt icebreaker_icache_only.asc
+	icepack icebreaker_icache_only.asc icebreaker_icache_only.bin
+
+icebprog_icache_only: icebreaker_icache_only.bin icebreaker_fw.bin
+	iceprog icebreaker_icache_only.bin
 	iceprog -o 1M icebreaker_fw.bin
 
 icebreaker_sections.lds: sections.lds
@@ -162,7 +192,9 @@ clean:
 	rm -f icebreaker_syn.v icebreaker_syn_tb.vvp icebreaker_tb.vvp
 	rm -f icebreaker_nocache.json icebreaker_nocache.log icebreaker_nocache.asc icebreaker_nocache.rpt icebreaker_nocache.bin
 	rm -f icebreaker_baseline.json icebreaker_baseline.log icebreaker_baseline.asc icebreaker_baseline.rpt icebreaker_baseline.bin
+	rm -f icebreaker_directmap.json icebreaker_directmap.log icebreaker_directmap.asc icebreaker_directmap.rpt icebreaker_directmap.bin
+	rm -f icebreaker_icache_only.json icebreaker_icache_only.log icebreaker_icache_only.asc icebreaker_icache_only.rpt icebreaker_icache_only.bin
 
 .PHONY: spiflash_tb clean
 .PHONY: hx8kprog hx8kprog_fw hx8ksim hx8ksynsim
-.PHONY: icebprog icebprog_fw icebsim icebsynsim icebprog_nocache icebprog_baseline
+.PHONY: icebprog icebprog_fw icebsim icebsynsim icebprog_nocache icebprog_baseline icebprog_directmap icebprog_icache_only

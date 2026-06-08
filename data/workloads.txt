@@ -1,0 +1,21 @@
+kalman_steady_state.c
+- Baseline: 4.144hz, 120.7ms
+- No cache: 6.475hz, 77.22ms
+- Direct map: 13.32hz, 37.53ms
+- Icache only: 16.36hz, 30.57ms
+- Cache: 16.54hz, 30.23ms
+
+fibonacci_iterative.c
+- Baseline: 263.4hz, 1.898ms
+- No cache: 411.6hz, 1.214ms
+- Cache: 799.7hz, 625.2us
+
+fibonacci_recursive.c
+- Baseline: 9.65hz, 51.81ms
+- No cache: 15.08hz, 33.16ms
+- Cache: 39.91hz, 12.52ms
+
+bubble_sort.c
+- Baseline: 3.906hz, 128.0ms
+- No cache: 6.104hz, 81.92ms
+- Cache: 12.03hz, 41.55ms
