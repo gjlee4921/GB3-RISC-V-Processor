@@ -1,8 +1,8 @@
 /*
 currently this just checks validation
-*/`
+*/
 
-timescale 1ns/1ps
+`timescale 1ns/1ps
 
 module tb;
 

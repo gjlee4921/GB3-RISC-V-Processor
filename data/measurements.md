@@ -1,4 +1,4 @@
-# Hardware Measurements — GB3 RISC-V Cache Project
+# Hardware Measurements — RISC-V Cache Project
 
 All measurements taken on iCEBreaker board (iCE40UP5K) at room temperature.
 Performance measured via Picoscope on LED1 (GPIO bit 5). LED toggles once per
@@ -20,7 +20,7 @@ one workload execution time.
 **Notes:**
 - Baseline is synthesised with `-D NO_PLL`; all other builds use the shared `icebreaker.v` top level with PLL active.
 - Direct-map icache uses the `dcache` module instantiated on the instruction fetch path.
-- Full design re-enables `ENABLE_COUNTERS` (vs nocache/directmap/icache-only) for secret-benchmark compatibility; this does not affect the workloads measured here.
+- Full design re-enables `ENABLE_COUNTERS` (vs nocache/directmap/icache-only) for compatibility with externally-compiled binaries; this does not affect the workloads measured here.
 - ENABLE_DIV=0 in all PLL builds (overridden by `icebreaker.v`); kalman_steady_state does not use division.
 
 ---
@@ -201,7 +201,7 @@ NextPnr output was not captured to file for all builds. Confirmed placed LC coun
 | Direct-map → Icache only | +351 | Set-assoc upgrade: 2-way, LRU logic, larger FSM |
 | Icache only → Full | +423 | Data cache FSM + tag/valid registers + BRAM arbiter + ENABLE_COUNTERS re-enabled (+~143) |
 
-**Note on ENABLE_COUNTERS inconsistency:** Nocache, direct-map, and icache-only all have `ENABLE_COUNTERS=0` — counters were disabled as part of the initial area optimisation (~143 LC saving). The full design re-enables them (`ENABLE_COUNTERS=1`) because several secret-benchmark binaries execute `rdcycle`/`rdinstret` before the LED loop; with counters disabled these become illegal instructions and the CPU halts. Baseline also has `ENABLE_COUNTERS=1` (original PicoSoC default). This means the LUT4 counts for nocache/direct-map/icache-only are each ~143 lower than they would be with counters on, and the `icache-only → full` delta of +423 is inflated by ~143 (the true cost of adding the data cache alone is ~+280 LUT4). Area comparisons between the full design and baseline are unaffected since both have counters enabled.
+**Note on ENABLE_COUNTERS inconsistency:** Nocache, direct-map, and icache-only all have `ENABLE_COUNTERS=0` — counters were disabled as part of the initial area optimisation (~143 LC saving). The full design re-enables them (`ENABLE_COUNTERS=1`) because several externally-compiled binaries execute `rdcycle`/`rdinstret` before the LED loop; with counters disabled these become illegal instructions and the CPU halts. Baseline also has `ENABLE_COUNTERS=1` (original PicoSoC default). This means the LUT4 counts for nocache/direct-map/icache-only are each ~143 lower than they would be with counters on, and the `icache-only → full` delta of +423 is inflated by ~143 (the true cost of adding the data cache alone is ~+280 LUT4). Area comparisons between the full design and baseline are unaffected since both have counters enabled.
 
 ---
 

@@ -4,58 +4,10 @@ ifneq ($(shell which riscv32-unknown-elf-gcc 2>/dev/null),)
     CROSS=riscv32-unknown-elf-
 else ifneq ($(shell which riscv-none-elf-gcc 2>/dev/null),)
     CROSS=riscv-none-elf-
-else ifneq ($(shell ls /usr/local/apps/GB3-RISCV/riscv32imc/bin/riscv32-unknown-elf-gcc 2>/dev/null),)
-    CROSS=/usr/local/apps/GB3-RISCV/riscv32imc/bin/riscv32-unknown-elf-
 else
     $(error No RISC-V toolchain found)
 endif
 CFLAGS=
-
-# ---- iCE40 HX8K Breakout Board ----
-
-hx8ksim: hx8kdemo_tb.vvp hx8kdemo_fw.hex
-	vvp -N $< +firmware=hx8kdemo_fw.hex
-
-hx8ksynsim: hx8kdemo_syn_tb.vvp hx8kdemo_fw.hex
-	vvp -N $< +firmware=hx8kdemo_fw.hex
-
-hx8kdemo.json: hx8kdemo.v spimemio.v simpleuart.v picosoc.v ../picorv32.v
-	yosys -ql hx8kdemo.log -p 'synth_ice40 -top hx8kdemo -json hx8kdemo.json' $^
-
-hx8kdemo_tb.vvp: hx8kdemo_tb.v hx8kdemo.v spimemio.v simpleuart.v picosoc.v ../picorv32.v spiflash.v
-	iverilog -s testbench -o $@ $^ `yosys-config --datdir/ice40/cells_sim.v` -DNO_ICE40_DEFAULT_ASSIGNMENTS
-
-hx8kdemo_syn_tb.vvp: hx8kdemo_tb.v hx8kdemo_syn.v spiflash.v
-	iverilog -s testbench -o $@ $^ `yosys-config --datdir/ice40/cells_sim.v` -DNO_ICE40_DEFAULT_ASSIGNMENTS
-
-hx8kdemo_syn.v: hx8kdemo.json
-	yosys -p 'read_json hx8kdemo.json; write_verilog hx8kdemo_syn.v'
-
-hx8kdemo.asc: hx8kdemo.pcf hx8kdemo.json
-	nextpnr-ice40 --hx8k --package ct256 --asc hx8kdemo.asc --json hx8kdemo.json --pcf hx8kdemo.pcf
-
-hx8kdemo.bin: hx8kdemo.asc
-	icetime -d hx8k -c 12 -mtr hx8kdemo.rpt hx8kdemo.asc
-	icepack hx8kdemo.asc hx8kdemo.bin
-
-hx8kprog: hx8kdemo.bin hx8kdemo_fw.bin
-	iceprog hx8kdemo.bin
-	iceprog -o 1M hx8kdemo_fw.bin
-
-hx8kprog_fw: hx8kdemo_fw.bin
-	iceprog -o 1M hx8kdemo_fw.bin
-
-hx8kdemo_sections.lds: sections.lds
-	$(CROSS)cpp -P -DHX8KDEMO -o $@ $^
-
-hx8kdemo_fw.elf: hx8kdemo_sections.lds start.s firmware.c
-	$(CROSS)gcc $(CFLAGS) -DHX8KDEMO -mabi=ilp32 -march=rv32imc -Wl,--build-id=none,-Bstatic,-T,hx8kdemo_sections.lds,--strip-debug -ffreestanding -nostdlib -o hx8kdemo_fw.elf start.s firmware.c
-
-hx8kdemo_fw.hex: hx8kdemo_fw.elf
-	$(CROSS)objcopy -O verilog hx8kdemo_fw.elf hx8kdemo_fw.hex
-
-hx8kdemo_fw.bin: hx8kdemo_fw.elf
-	$(CROSS)objcopy -O binary hx8kdemo_fw.elf hx8kdemo_fw.bin
 
 # ---- iCE40 IceBreaker Board ----
 
@@ -183,11 +135,8 @@ cmos.log: spimemio.v simpleuart.v picosoc.v ../picorv32.v
 # ---- Clean ----
 
 clean:
-	rm -f testbench.vvp testbench.vcd spiflash_tb.vvp spiflash_tb.vcd
-	rm -f hx8kdemo_fw.elf hx8kdemo_fw.hex hx8kdemo_fw.bin cmos.log
+	rm -f testbench.vvp testbench.vcd spiflash_tb.vvp spiflash_tb.vcd cmos.log
 	rm -f icebreaker_fw.elf icebreaker_fw.hex icebreaker_fw.bin
-	rm -f hx8kdemo.json hx8kdemo.log hx8kdemo.asc hx8kdemo.rpt hx8kdemo.bin
-	rm -f hx8kdemo_syn.v hx8kdemo_syn_tb.vvp hx8kdemo_tb.vvp
 	rm -f icebreaker.json icebreaker.log icebreaker.asc icebreaker.rpt icebreaker.bin
 	rm -f icebreaker_syn.v icebreaker_syn_tb.vvp icebreaker_tb.vvp
 	rm -f icebreaker_nocache.json icebreaker_nocache.log icebreaker_nocache.asc icebreaker_nocache.rpt icebreaker_nocache.bin
@@ -196,5 +145,4 @@ clean:
 	rm -f icebreaker_icache_only.json icebreaker_icache_only.log icebreaker_icache_only.asc icebreaker_icache_only.rpt icebreaker_icache_only.bin
 
 .PHONY: spiflash_tb clean
-.PHONY: hx8kprog hx8kprog_fw hx8ksim hx8ksynsim
 .PHONY: icebprog icebprog_fw icebsim icebsynsim icebprog_nocache icebprog_baseline icebprog_directmap icebprog_icache_only
